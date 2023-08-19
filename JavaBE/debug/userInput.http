@@ -1,0 +1,6 @@
+POST http://localhost:8080/debug
+Content-Type: application/json
+
+{
+  "input": "焼肉屋に行きたい"
+}

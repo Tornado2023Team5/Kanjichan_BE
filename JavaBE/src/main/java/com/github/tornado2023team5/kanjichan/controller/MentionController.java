@@ -15,27 +15,27 @@ import org.springframework.stereotype.Component;
 
 import java.util.concurrent.ExecutionException;
 
-@LineMessageHandler
-@Component
-@RequiredArgsConstructor
-public class MentionController {
-    private final LineMessagingClient lineMessagingClient;
-
-    @EventMapping
-    public TextMessage handleTextMessageEvent(MessageEvent<TextMessageContent> event) throws ExecutionException, InterruptedException {
-        Source source = event.getSource();
-        if (source instanceof GroupSource groupSource) {
-            String botUserId = lineMessagingClient.getBotInfo().get().getUserId();
-
-            var messageText = event.getMessage().getText();
-            if (messageText.contains("@" + botUserId)) {
-                // メンションに反応する処理
-                var message = "メンションありがとうございます！";
-                var replyMessage = new ReplyMessage(event.getReplyToken(), TextMessage.builder().text(message).build());
-                lineMessagingClient.replyMessage(replyMessage);
-            }
-        }
-        return new TextMessage(event.getMessage().getText());
-    }
-}
+//@LineMessageHandler
+//@Component
+//@RequiredArgsConstructor
+//public class MentionController {
+//    private final LineMessagingClient lineMessagingClient;
+//
+//    @EventMapping
+//    public TextMessage handleTextMessageEvent(MessageEvent<TextMessageContent> event) throws ExecutionException, InterruptedException {
+//        Source source = event.getSource();
+//        if (source instanceof GroupSource groupSource) {
+//            String botUserId = lineMessagingClient.getBotInfo().get().getUserId();
+//
+//            var messageText = event.getMessage().getText();
+//            if (messageText.contains("@" + botUserId)) {
+//                // メンションに反応する処理
+//                var message = "メンションありがとうございます！";
+//                var replyMessage = new ReplyMessage(event.getReplyToken(), TextMessage.builder().text(message).build());
+//                lineMessagingClient.replyMessage(replyMessage);
+//            }
+//        }
+//        return new TextMessage(event.getMessage().getText());
+//    }
+//}
 

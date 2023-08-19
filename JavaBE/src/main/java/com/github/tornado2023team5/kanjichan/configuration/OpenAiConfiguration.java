@@ -5,8 +5,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class OpenAiConfig {
-    private final String openAiToken = "YOUR_CHANNEL_ACCESS_TOKEN";
+public class OpenAiConfiguration {
+    private static final String openAiToken = "";
 
     @Bean
     public OpenAiService openAiService() {
