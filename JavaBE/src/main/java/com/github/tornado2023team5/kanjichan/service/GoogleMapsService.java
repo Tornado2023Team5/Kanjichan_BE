@@ -1,12 +1,10 @@
 package com.github.tornado2023team5.kanjichan.service;
 
 import com.github.tornado2023team5.kanjichan.model.ShopCategory;
-import com.github.tornado2023team5.kanjichan.model.ShopInfo;
 import com.google.maps.GeoApiContext;
 import com.google.maps.PlaceDetailsRequest;
 import com.google.maps.PlacesApi;
 import com.google.maps.errors.ApiException;
-import com.google.maps.model.PlaceDetails;
 import com.google.maps.model.PlaceType;
 import com.google.maps.model.PlacesSearchResult;
 import lombok.RequiredArgsConstructor;
@@ -16,8 +14,6 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -31,9 +27,9 @@ public class GoogleMapsService {
         return response.results;
     }
 
-    public HashMap<String, URL> getWebSite(PlacesSearchResult[] results) throws IOException, InterruptedException, ApiException {
+    public HashMap<String, URL> getWebSites(PlacesSearchResult[] results) throws IOException, InterruptedException, ApiException {
         return new HashMap<>(){{
-            for (PlacesSearchResult result : results) {
+            for (var result : results) {
                 var request = PlacesApi.placeDetails(context, result.placeId);
                 request.fields(Arrays.stream(PlaceDetailsRequest.FieldMask.values())
                         .filter(x -> x != PlaceDetailsRequest.FieldMask.SECONDARY_OPENING_HOURS)

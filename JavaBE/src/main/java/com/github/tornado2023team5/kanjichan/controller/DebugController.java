@@ -39,7 +39,7 @@ public class DebugController {
     @GetMapping("/public/debug3")
     public Map debug3Get(@RequestParam String input, @RequestParam String location) throws IOException, InterruptedException, ApiException {
         var category = service.pickUp(input);
-        return googleMapsService.getWebSite(googleMapsService.getShopInfo(location, category));
+        return googleMapsService.getWebSites(googleMapsService.getShopInfo(location, category));
     }
 
 }

@@ -5,7 +5,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class GoogleMapsConfiguration {
+public class  GoogleMapsConfiguration {
     private static final String API_KEY = "";
 
     @Bean
