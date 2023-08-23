@@ -1,23 +1,15 @@
 package com.github.tornado2023team5.kanjichan.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import lombok.Data;
 
 import java.time.LocalDateTime;
 
-@Entity
+@Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Action {
 
-    @Id
-    private String id;
-
     private String name;
-
-    @ManyToOne
-    @JoinColumn(name = "asobiId")
-    private Asobi asobi;
 
     private String description;
 

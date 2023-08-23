@@ -1,14 +1,15 @@
 package com.github.tornado2023team5.kanjichan.entity;
 
-import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import lombok.Data;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
-@Entity
+@Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Schedule {
 
-    @Id
     private String id;
 
     private LocalDateTime date;
@@ -17,12 +18,7 @@ public class Schedule {
 
     private Boolean afternoon;
 
-    @ManyToOne
-    @JoinColumn(name = "userId")
     private User user;
 
-    @ManyToMany(mappedBy = "schedules")
     private List<Asobi> asobis;
-
-    // getters, setters, etc.
 }

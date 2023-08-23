@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class  GoogleMapsConfiguration {
-    private static final String API_KEY = "";
+    private static final String API_KEY = System.getenv("GOOGLE_MAPS_API_KEY");
 
     @Bean
     public GeoApiContext getGeoApiContext() {

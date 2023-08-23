@@ -11,6 +11,6 @@ public class ShopInfo {
     @JsonPropertyDescription("お店のURL")
     String url;
 
-//    @JsonPropertyDescription("お店の場所")
-//    String location;
+    @JsonPropertyDescription("お店の場所")
+    String location;
 }

@@ -12,26 +12,7 @@ import java.sql.Statement;
 public class KanjichanApplication {
 
     public static void main(String[] args) {
-        setup();
+//        setup();
         SpringApplication.run(KanjichanApplication.class, args);
-    }
-
-    public static void setup() {
-        String jdbcUrl = System.getenv("DOCKER_DATABASE_URL");
-
-        try (Connection conn = DriverManager.getConnection(jdbcUrl)) {
-
-            Statement stmt = conn.createStatement();
-            ResultSet rs = stmt.executeQuery("SELECT * FROM mytable");
-
-            while (rs.next()) {
-                System.out.println(rs.getString("column_name"));
-            }
-
-            rs.close();
-            stmt.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 }

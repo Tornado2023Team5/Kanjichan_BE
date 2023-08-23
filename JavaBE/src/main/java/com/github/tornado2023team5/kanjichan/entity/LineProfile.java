@@ -1,13 +1,11 @@
 package com.github.tornado2023team5.kanjichan.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.OneToOne;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import lombok.Data;
 
-@Entity
+@Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class LineProfile {
-
-    @Id
     private String id;
 
     private String lineUserId;  // この属性には@UniqueConstraintを使用して一意性を保証することができます。
@@ -16,8 +14,5 @@ public class LineProfile {
 
     private String lineUserName;
 
-    @OneToOne(mappedBy = "line")
     private User user;
-
-    // getters, setters, etc.
 }
