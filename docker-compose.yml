@@ -9,9 +9,6 @@ services:
     volumes:
       - gradle-cache:/root/.gradle
       - ./JavaBE/build/libs/Kanjichan-0.0.1.jar:/opt/Kanjichan.jar
-#    volumes:
-#      - gradle-cache:/root/.gradle
-#      - JavaBE:/
     command: ["java", "-jar", "Kanjichan.jar"]
 
 volumes:
