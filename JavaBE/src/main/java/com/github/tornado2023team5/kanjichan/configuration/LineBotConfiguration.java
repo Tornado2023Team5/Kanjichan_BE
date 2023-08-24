@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class LineBotConfiguration {
-    private static final String channelAccessToken = System.getenv("LINE_BOT_TOKEN");
+    private static final String channelAccessToken = System.getenv("LINE_BOT_CHANNEL_TOKEN");
 
     @Bean
     public LineMessagingClient lineMessagingClient() {

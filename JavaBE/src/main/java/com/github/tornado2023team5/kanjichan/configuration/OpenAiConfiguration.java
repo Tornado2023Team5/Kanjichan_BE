@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class OpenAiConfiguration {
-    private static final String openAiToken = "";
+    private static final String openAiToken = System.getenv("OPENAI_API_KEY");
 
     @Bean
     public OpenAiService openAiService() {
