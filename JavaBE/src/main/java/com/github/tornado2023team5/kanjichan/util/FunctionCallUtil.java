@@ -8,6 +8,7 @@ import com.theokanning.openai.service.OpenAiService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
 import java.util.List;
 
 @RequiredArgsConstructor
@@ -18,7 +19,7 @@ public class FunctionCallUtil {
     public <T> T call(String text, FunctionCallingBase base) {
         var executor = base.getExecutor();
         var request = base.getRequest(executor);
-        request.setMessages(List.of(new ChatMessage(ChatMessageRole.USER.value(), text)));
+        request.setMessages(Arrays.asList(new ChatMessage(ChatMessageRole.SYSTEM.value(), base.getBaseMessages()), new ChatMessage(ChatMessageRole.USER.value(), text)));
         ChatMessage responseMessage = service.createChatCompletion(request).getChoices().get(0).getMessage();
         ChatFunctionCall functionCall = responseMessage.getFunctionCall();
         return executor.execute(functionCall);

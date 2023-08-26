@@ -11,7 +11,25 @@ import lombok.Value;
 @AllArgsConstructor
 @NoArgsConstructor
 public class CommandTypeFormat {
-    @JsonPropertyDescription("ユーザー入力の元呼び出すコマンド。'MAKE_PLAN', 'SET_LOCATION', 'SEARCH_SPOTS', 'REMOVE_SPOT', 'ADOPT_SPOTS', 'MAKE_DRAFT', 'DECIDE_DRAFT', 'EDIT_AND_ADD_SPOT_FROM_DECIDED_DRAFT', 'EDIT_AND_REMOVE_SPOT_FROM_DECIDED_DRAFT', 'EDIT_AND_CHANGE_SPOT_FROM_DECIDED_DRAFT', 'NONE' のいずれか")
+    @JsonPropertyDescription("""
+            ユーザー入力の元呼び出すコマンド。
+            
+            'MAKE_PLAN',
+            'RESET_PLAN'
+            'CONFIRM_PLAN',
+            'SET_LOCATION',
+            'SEARCH_SPOTS',
+            'REMOVE_SPOT',
+            'ADOPT_SPOTS',
+            'SHOW_ADOPTED_SPOTS',
+            'MAKE_DRAFT',
+            'DECIDE_DRAFT',
+            'EDIT_AND_ADD_SPOT_FROM_DECIDED_DRAFT',
+            'EDIT_AND_REMOVE_SPOT_FROM_DECIDED_DRAFT',
+            'EDIT_AND_CHANGE_SPOT_FROM_DECIDED_DRAFT',
+            'NONE'
+            のいずれか"
+            """)
     @JsonProperty(required = true)
     private CommandType commandType;
 }

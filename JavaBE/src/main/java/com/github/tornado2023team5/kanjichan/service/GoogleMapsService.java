@@ -1,5 +1,6 @@
 package com.github.tornado2023team5.kanjichan.service;
 
+import com.github.tornado2023team5.kanjichan.entity.Action;
 import com.github.tornado2023team5.kanjichan.model.Address;
 import com.github.tornado2023team5.kanjichan.model.function.ShopCategory;
 import com.google.maps.GeoApiContext;
@@ -24,9 +25,7 @@ public class GoogleMapsService {
     private final GeoApiContext context;
 
     public PlacesSearchResult[] getShopInfo(String location, ShopCategory category) throws IOException, InterruptedException, ApiException {
-        var response = PlacesApi.textSearchQuery(context, location + " " + category.getValue())
-                .type(PlaceType.RESTAURANT)
-                .await();
+        var response = PlacesApi.textSearchQuery(context, location + " " + category.getValue()).await();
         return response.results;
     }
 
@@ -42,8 +41,13 @@ public class GoogleMapsService {
         }};
     }
 
-    public Address getAddressDetails(String addressString) throws ApiException, InterruptedException, IOException {
-        GeocodingResult[] results = GeocodingApi.geocode(context, addressString).await();
+    public Address getAddressDetails(String addressString)  {
+        GeocodingResult[] results = new GeocodingResult[0];
+        try {
+            results = GeocodingApi.geocode(context, addressString).await();
+        } catch (ApiException | InterruptedException | IOException e) {
+            throw new RuntimeException(e);
+        }
 
         Address address = new Address();
         if (results.length > 0) {
@@ -55,11 +59,7 @@ public class GoogleMapsService {
         return address;
     }
 
-    public static void sortAddress(List<Address> addresses, Address refAddress) {
-        addresses.sort(Comparator.comparingDouble(a -> haversineDistance(refAddress.getLatitude(), refAddress.getLongitude(), a.getLatitude(), a.getLongitude())));
-    }
-
-    public static double haversineDistance(double lat1, double lon1, double lat2, double lon2) {
+    private static double haversineDistance(double lat1, double lon1, double lat2, double lon2) {
         int R = 6371; // 地球の半径 (km)
         double dLat = Math.toRadians(lat2 - lat1);
         double dLon = Math.toRadians(lon2 - lon1);
@@ -70,7 +70,7 @@ public class GoogleMapsService {
         return R * c;
     }
 
-    public static double[][] fullSearch(List<Address> addresses) {
+    private static double[][] fullSearch(List<Address> addresses) {
         double[][] distances = new double[addresses.size()][addresses.size()];
         for (int i = 0; i < addresses.size(); i++) {
             for (int j = i + 1; j < addresses.size(); j++) {
@@ -82,7 +82,16 @@ public class GoogleMapsService {
     }
 
     // 最初の地点からその点まで戻る一筆書きの最適経路を求める
-    public static List<Address> sortByDistance(List<Address> addresses, Address refAddress) {
+    public List<Action> sortByDistance(List<Action> draft, String start) throws IOException, InterruptedException, ApiException {
+        var response = PlacesApi.textSearchQuery(context, start).await();
+        var station = Arrays.stream(response.results).findFirst();
+        if(station.isEmpty()) return new ArrayList<>();
+        var stationAction = new Action();
+        stationAction.setLocation(station.get().formattedAddress);
+        stationAction.setName(station.get().name);
+        draft.add(0, stationAction);
+        var addresses = draft.stream().map(action -> getAddressDetails(action.getLocation())).toList();
+
         double[][] distances = fullSearch(addresses);
 
         var passed = new ArrayDeque<Integer>();
@@ -93,7 +102,7 @@ public class GoogleMapsService {
         var result = DFS(passed, rem, 0, distances);
         return new ArrayList<>() {{
             for (int i : result.getSecond()) {
-                add(addresses.get(i));
+                add(draft.get(i));
             }
         }};
     }

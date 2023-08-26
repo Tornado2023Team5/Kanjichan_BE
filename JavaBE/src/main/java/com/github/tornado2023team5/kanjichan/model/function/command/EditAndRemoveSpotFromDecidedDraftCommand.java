@@ -7,11 +7,13 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.Value;
 
+import java.util.List;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 public class EditAndRemoveSpotFromDecidedDraftCommand {
     @JsonPropertyDescription("削除するスポットを追加する位置")
     @JsonProperty(required = true)
-    private int index;
+    private List<String> spots;
 }

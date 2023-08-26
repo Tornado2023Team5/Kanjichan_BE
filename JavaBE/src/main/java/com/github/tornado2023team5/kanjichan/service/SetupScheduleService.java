@@ -4,10 +4,13 @@ import com.github.tornado2023team5.kanjichan.entity.Action;
 import com.github.tornado2023team5.kanjichan.entity.Asobi;
 import com.github.tornado2023team5.kanjichan.entity.User;
 import com.github.tornado2023team5.kanjichan.model.AsobiPlanningSession;
+import com.github.tornado2023team5.kanjichan.model.function.ShopCategory;
 import com.github.tornado2023team5.kanjichan.util.RestfulAPIUtil;
+import com.google.maps.errors.ApiException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.util.*;
 
 @Service
@@ -15,7 +18,8 @@ import java.util.*;
 public class SetupScheduleService {
     private final RestfulAPIUtil restfulAPIUtil;
     private final static Random random = new Random();
-    private static final HashMap<String , AsobiPlanningSession> sessions = new HashMap<>();
+    public static final HashMap<String , AsobiPlanningSession> sessions = new HashMap<>();
+    private final GoogleMapsService googleMapsService;
 
     public void start(String id, List<String> lineIds) {
         var session = new AsobiPlanningSession();
@@ -36,7 +40,21 @@ public class SetupScheduleService {
         sessions.put(id, session);
     }
 
-    public boolean isStarted(String id) {
+    public void reset(String id) {
+        sessions.remove(id);
+    }
+
+    public void confirm(String id) {
+        var session = sessions.get(id);
+        var asobi = new Asobi();
+        asobi.setId(session.getId());
+        asobi.setActions(session.getActions());
+        asobi.setParticipants(session.getUsers());
+        restfulAPIUtil.post("http://localhost:4000/api/asobi/start", asobi);
+        sessions.remove(id);
+    }
+
+    public boolean isEditting(String id) {
         return sessions.containsKey(id);
     }
 
@@ -51,8 +69,10 @@ public class SetupScheduleService {
     public void draft(String id) {
         List<List<Action>> drafts = new ArrayList<>();
         var session = getSession(id);
-        for (int i = 0 ; i < 3 ; i++) {
+        // 草案を4つ作成する
+        for (int i = 0 ; i < 5 ; i++) {
             var draft = new ArrayList<Action>();
+            // 各採用スポットからランダムに1つづつ選ぶ
             for(var actions : session.getResultsList()) {
                 var result = actions.get(random.nextInt(actions.size()));
                 var action = new Action();
@@ -63,5 +83,11 @@ public class SetupScheduleService {
             drafts.add(draft);
         }
         session.setDrafts(drafts);
+    }
+
+    public void decideDraft(AsobiPlanningSession session, List<Action> draft) throws IOException, InterruptedException, ApiException {
+        googleMapsService.sortByDistance(draft, session.getLocation() + "駅");
+        session.setActions(draft);
+        session.setDrafts(null);
     }
 }

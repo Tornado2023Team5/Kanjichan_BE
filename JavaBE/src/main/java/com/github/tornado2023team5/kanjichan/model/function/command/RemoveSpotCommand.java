@@ -7,11 +7,13 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.Value;
 
+import java.util.List;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 public class RemoveSpotCommand {
-    @JsonPropertyDescription("候補から消すスポットのインデックス。情報がない無効な値の場合は-1。")
+    @JsonPropertyDescription("候補から消すスポット")
     @JsonProperty(required = true)
-    private int index;
+    private List<String> spots;
 }

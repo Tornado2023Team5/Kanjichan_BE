@@ -3,6 +3,7 @@ package com.github.tornado2023team5.kanjichan.model;
 import com.github.tornado2023team5.kanjichan.entity.Action;
 import com.github.tornado2023team5.kanjichan.entity.Asobi;
 import com.github.tornado2023team5.kanjichan.entity.User;
+import com.github.tornado2023team5.kanjichan.service.SetupScheduleService;
 import com.google.maps.model.PlacesSearchResult;
 import lombok.Data;
 
@@ -19,8 +20,7 @@ public class AsobiPlanningSession {
     List<List<PlacesSearchResult>> resultsList = new ArrayList<>();
     List<List<Action>> drafts;
 
-    public void adopt() {
-        resultsList.add(results);
-        results = null;
+    public boolean isEditting() {
+        return SetupScheduleService.sessions.values().stream().anyMatch(session -> session.getId().equals(id));
     }
 }

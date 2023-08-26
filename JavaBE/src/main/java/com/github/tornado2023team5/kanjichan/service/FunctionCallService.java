@@ -19,28 +19,8 @@ import java.util.stream.Collectors;
 public class FunctionCallService {
     private final FunctionCallUtil functionCallUtil;
 
-    public CommandInformationFormat detect(String text) {
-        CommandTypeFormat format = functionCallUtil.call(text, new FunctionCallingBase(
-                CommandTypeFormat.class,
-                "detect_input_for_command", """
-                        分類したコマンドを返す関数。ここでプログラマーはコマンドの入力内容を取得します。
-                        """, """
-                        あなたは旅行者の旅行計画を補助するBOTです。
-                        ユーザーの入力がコマンドのどれに当てはまるか分類してください。
-                        
-                        MakePlan: 旅行計画を作成します。
-                        SetLocation: 計画の目的地を設定します。
-                        SearchSpots: 計画の観光スポット、遊び場を検索します。
-                        RemoveSpot: 検索したスポットから選択したものを削除します。
-                        AdoptSpot: 検索したスポットを採用します。
-                        MakeDraft: 旅行計画の下書きを複数作成します。
-                        DecideDraft: 複数の下書きから一つ下書きを選択します。
-                        EditAndAddSpotFromDecidedDraft: 選択した下書きにスポットを追加します。
-                        EditAndRemoveSpotFromDecidedDraft: 選択した下書きからスポットを削除します。
-                        EditAndChangeSpotFromDecidedDraft: 選択した下書きのスポットの順番を入れ替えます。。
-                        None: どのコマンドにも当てはまらない場合です。
-                        """
-        ));
+    public CommandInformationFormat detect(String text, String prompt) {
+        CommandTypeFormat format = functionCallUtil.call(text, new FunctionCallingBase(CommandTypeFormat.class, "detect_input_for_command", "分類したコマンドを返す関数。ここでプログラマーはコマンドの入力内容を取得します。 ", prompt));
         return new CommandInformationFormat(format.getCommandType(), text);
     }
 
@@ -63,10 +43,12 @@ public class FunctionCallService {
     public RemoveSpotCommand removeSpot(String text, List<PlacesSearchResult> spots) {
         String prompt = """
                 あなたは旅行者の旅行計画を補助するBOTです。
-                ユーザーの入力を基に下記の遊び場から削除するものをindex番号で選択してください。
+                ユーザーの入力を基に下記のスポットから削除するものを候補にある名前をそのままで選択してください。
+                下記のスポット一覧以外の入力は無効です。
                 ###
                 """ + spots.stream().map(spot -> spot.name).collect(Collectors.joining("\n"));
-        return functionCallUtil.call(text, new FunctionCallingBase(RemoveSpotCommand.class, "remove_spot", "観光スポットを削除します。", prompt));
+        System.out.println(prompt);
+        return functionCallUtil.call(text, new FunctionCallingBase(RemoveSpotCommand.class, "remove_spot", "観光スポットを削除します。スポット名のリストを入れてください", prompt));
     }
 
     public DecideDraftCommand decideDraft(String text, List<List<Action>> drafts) {
@@ -95,7 +77,7 @@ public class FunctionCallService {
     public EditAndRemoveSpotFromDecidedDraftCommand editAndRemoveSpotFromDecidedDraft(String text, List<Action> draft) {
         String prompt = """
                 あなたは旅行者の旅行計画を補助するBOTです。
-                ユーザーの入力内容を基にして以下の下書きにスポットを追加してください。
+                ユーザーの入力内容を基にして以下の下書きからスポットを削除してください。
                 ###
                 """;
         prompt += draft.stream().map(Action::getName).collect(Collectors.joining("\n"));
@@ -105,7 +87,7 @@ public class FunctionCallService {
     public EditAndChangeSpotFromDecidedDraftCommand editAndChangeSpotFromDecidedDraft(String text, List<Action> draft) {
         String prompt = """
                 あなたは旅行者の旅行計画を補助するBOTです。
-                ユーザーの入力内容を基にして以下の下書きにスポットを追加してください。
+                ユーザーの入力内容を基にして以下の下書きのスポットの順番を入れ替えてください。
                 ###
                 """;
         prompt += draft.stream().map(Action::getName).collect(Collectors.joining("\n"));

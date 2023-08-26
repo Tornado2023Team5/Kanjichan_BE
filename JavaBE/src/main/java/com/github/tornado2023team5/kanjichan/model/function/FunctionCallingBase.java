@@ -17,10 +17,6 @@ public class FunctionCallingBase {
     String functionDescription;
     String baseMessages;
 
-    private List<ChatMessage> getMessagesList() {
-        return List.of(new ChatMessage(ChatMessageRole.SYSTEM.value(), baseMessages));
-    }
-
     public FunctionExecutor getExecutor() {
         return new FunctionExecutor(Collections.singletonList(
                 ChatFunction.builder().name(functionName)
@@ -34,8 +30,9 @@ public class FunctionCallingBase {
     public ChatCompletionRequest getRequest(FunctionExecutor executor) {
         return ChatCompletionRequest
                 .builder()
-                .model("gpt-3.5-turbo-0613")
+                .model("gpt-3.5-turbo")
                 .functions(executor.getFunctions())
+                .messages(List.of(new ChatMessage(ChatMessageRole.SYSTEM.value(), baseMessages)))
                 .functionCall(new ChatCompletionRequest.ChatCompletionRequestFunctionCall(functionName))
                 .maxTokens(256)
                 .build();

@@ -1,19 +1,19 @@
 package com.github.tornado2023team5.kanjichan.controller;
 
 import com.github.tornado2023team5.kanjichan.entity.Action;
+import com.github.tornado2023team5.kanjichan.model.AsobiPlanningSession;
 import com.github.tornado2023team5.kanjichan.model.function.CommandInformationFormat;
 import com.github.tornado2023team5.kanjichan.model.function.ShopCategory;
 import com.github.tornado2023team5.kanjichan.model.function.command.*;
 import com.github.tornado2023team5.kanjichan.service.*;
 import com.google.maps.errors.ApiException;
 import com.linecorp.bot.client.LineMessagingClient;
-import com.linecorp.bot.model.PushMessage;
+import com.linecorp.bot.model.ReplyMessage;
 import com.linecorp.bot.model.event.MessageEvent;
 import com.linecorp.bot.model.event.message.TextMessageContent;
 import com.linecorp.bot.model.event.source.GroupSource;
 import com.linecorp.bot.model.event.source.Source;
 import com.linecorp.bot.model.message.TextMessage;
-import com.linecorp.bot.model.response.BotApiResponse;
 import com.linecorp.bot.spring.boot.annotation.EventMapping;
 import com.linecorp.bot.spring.boot.annotation.LineMessageHandler;
 import lombok.RequiredArgsConstructor;
@@ -22,8 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.concurrent.ExecutionException;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @LineMessageHandler
@@ -36,484 +35,373 @@ public class MentionController {
     private final GoogleMapsService googleMapsService;
 
     @EventMapping
-    public TextMessage formatInput(MessageEvent<TextMessageContent> event) throws InterruptedException, IOException, ApiException {
+    public TextMessage formatInput(MessageEvent event) throws InterruptedException, IOException, ApiException {
         Source source = event.getSource();
-        var messageText = event.getMessage().getText();
+        var message = event.getMessage();
+        if(!(message instanceof TextMessageContent textContent)) return null;
+        var messageText = textContent.getText();
+        StringBuilder reply = new StringBuilder();
         if (!messageText.contains("@Moon")) return null;
+
         String[] lines = messageText.split("\n");
         String contentText = Arrays.stream(lines).skip(1).collect(Collectors.joining("\n"));
         String[] args = Arrays.stream(lines[0].split(" ")).skip(1).toArray(String[]::new);
+
         if (!(source instanceof GroupSource groupSource)) return null;
 
         String id = groupSource.getGroupId();
-        CommandInformationFormat format = functionCallService.detect(messageText.replace("@Moon", ""));
+        CommandInformationFormat format = functionCallService.detect(messageText.replace("@Moon", ""), commandList(id));
+        reply.append(format.getCommandType()).append("\n\n");
         switch (format.getCommandType()) {
-            case NONE -> {
-                send(groupSource.getGroupId(), "入力内容を正しく認識できませんでした。");
-                return null;
-            }
+            case NONE -> reply.append("入力内容を正しく認識できませんでした。");
             case MAKE_PLAN -> {
                 var command = functionCallService.makePlan(messageText);
-                if (command == null) {
-                    send(groupSource.getGroupId(), "入力内容を正しく認識できませんでした。");
-                    return null;
-                }
-                makePlan(id, command);
+                if (command == null) return new TextMessage(reply + "入力内容を正しく認識できませんでした。");
+                makePlan(id, reply, command);
             }
+            case RESET_PLAN -> resetPlan(id, reply);
+            case CONFIRM_PLAN -> confirmPlan(id, reply);
             case SET_LOCATION -> {
                 var command = functionCallService.setLocation(messageText);
-                if (command == null) {
-                    send(groupSource.getGroupId(), "入力内容を正しく認識できませんでした。");
-                    return null;
-                }
-                setDestination(id, command.getDestination());
+                if (command == null) return new TextMessage(reply + "入力内容を正しく認識できませんでした。");
+                setDestination(id, reply, command.getDestination());
             }
             case SEARCH_SPOTS -> {
                 var command = functionCallService.searchSpots(messageText);
-                if (command == null) {
-                    send(groupSource.getGroupId(), "入力内容を正しく認識できませんでした。");
-                    return null;
-                }
-                searchSpots(id, command.getCategory());
+                if (command == null) return new TextMessage(reply + "入力内容を正しく認識できませんでした。");
+                searchSpots(id, reply, command.getCategory());
             }
-            case REMOVE_SPOT -> removeSpot(id, messageText);
-            case ADOPT_SPOTS -> adopt(id);
-            case MAKE_DRAFT -> draft(id);
-            case DECIDE_DRAFT -> decideDraft(id, messageText);
-            case EDIT_AND_ADD_SPOT_TO_DECIDED_DRAFT -> editAndAddSpotFromDecidedDraft(id, messageText);
-            case EDIT_AND_REMOVE_SPOT_FROM_DECIDED_DRAFT -> editAndRemoveSpotFromDecidedDraft(id, messageText);
-            case EDIT_AND_CHANGE_SPOT_FROM_DECIDED_DRAFT -> editAndChangeSpotFromDecidedDraft(id, messageText);
-
+            case REMOVE_SPOT -> removeSpot(id, reply, messageText);
+            case ADOPT_SPOTS -> adopt(id, reply);
+            case SHOW_ADOPTED_SPOTS -> showAdoptedSpots(id, reply);
+            case MAKE_DRAFT -> draft(id, reply);
+            case DECIDE_DRAFT -> decideDraft(id, reply, messageText);
+            case EDIT_AND_ADD_SPOT_TO_DECIDED_DRAFT -> editAndAddSpotFromDecidedDraft(id, reply, messageText);
+            case EDIT_AND_REMOVE_SPOT_FROM_DECIDED_DRAFT -> editAndRemoveSpotFromDecidedDraft(id, reply, messageText);
+            case EDIT_AND_CHANGE_SPOT_FROM_DECIDED_DRAFT -> editAndChangeSpotFromDecidedDraft(id, reply, messageText);
         }
-        return null;
+        return new TextMessage(reply.toString());
     }
 
-    public void makePlan(String id, MakePlanCommand command) throws IOException, InterruptedException, ApiException {
-        if (setupScheduleService.isStarted(id)) {
-            send(id, "既に予定を立てています。");
+    public String commandList(String id) {
+        StringBuilder complete = new StringBuilder();
+        complete.append("あなたは旅行者の旅行計画を補助するBOTです。\n");
+        complete.append("ユーザーの入力がコマンドのどれに当てはまるか分類してください。\n");
+        complete.append("下記のコマンドの候補にないものは現在ユーザーが入力することはできません。\n");
+        if(!setupScheduleService.isEditting(id)) {
+            complete.append("MAKE_PLAN: 旅行計画を作成します。\n");
+            complete.append("NONE: どのコマンドにも当てはまらない場合です。\n");
+            return complete.toString();
+        }
+        var session = setupScheduleService.getSession(id);
+
+        complete.append("SET_LOCATION: 計画の目的地を設定します。\n");
+
+        if(session.getResults() != null) {
+            complete.append("SEARCH_SPOTS: 計画の観光スポット、遊び場を検索します。\n");
+            complete.append("REMOVE_SPOT: 検索したスポットから選択したものを削除します。\n");
+            complete.append("ADOPT_SPOT: 検索したスポットを採用します。\n");
+        }
+
+        if(session.getResultsList().size() == 0) {
+            complete.append("MAKE_DRAFT: 旅行計画の下書きを複数作成します。\n");
+            complete.append("SHOW_ADOPTED_SPOTS: 採用した観光スポット、遊び場をすべて表示します。\n");
+        }
+
+        if(session.getDrafts() != null)
+            complete.append("DECIDE_DRAFT: 複数の下書きから一つ下書きを選択します。\n");
+
+        if(session.getActions() != null) {
+            complete.append("EDIT_AND_ADD_SPOT_FROM_DECIDED_DRAFT: 選択した下書きにスポットを追加します。\n");
+            complete.append("EDIT_AND_REMOVE_SPOT_FROM_DECIDED_DRAFT: 選択した下書きからスポットを削除します。\n");
+            complete.append("EDIT_AND_CHANGE_SPOT_FROM_DECIDED_DRAFT: 選択した下書きのスポットの順番を入れ替えます。\n");
+            complete.append("CONFIRM_PLAN: 旅行計画を確定します。\n");
+        }
+
+        complete.append("RESET_PLAN: 現在計画中の旅行計画をリセットします。\n");
+        complete.append("NONE: どのコマンドにも当てはまらず、入力が不正と思われるもの。\n");
+
+        return complete.toString();
+    }
+
+    public void makePlan(String id, StringBuilder reply, MakePlanCommand command) throws IOException, InterruptedException, ApiException {
+        if (setupScheduleService.isEditting(id)) {
+            reply.append("既に予定を立てています。");
             return;
         }
         setupScheduleService.debug(id, new ArrayList<>());
-        send(id, "予定を立てました。");
-        setDestination(id, command.getDestination());
-        searchSpots(id, command.getCategory());
+        reply.append("予定を立てる準備をしました。\n");
+        setDestination(id, reply, command.getDestination());
+        searchSpots(id, reply, command.getCategory());
     }
 
-    public void setDestination(String id, String destination) {
+    public void resetPlan(String id, StringBuilder reply) {
         var session = setupScheduleService.getSession(id);
-        if(session == null) {
-            send(id, "予定を立てていません。");
+        if (session == null) {
+            reply.append("予定を立てていません。");
             return;
         }
-        if(destination == null) {
-            send(id, "活動場所を教えてください。\n 例: \n @bot \n 渋谷で遊びたい！");
+        setupScheduleService.reset(id);
+        reply.append("編集中の予定をリセットし、全ての情報を削除しました。\n");
+    }
+
+    public void confirmPlan(String id, StringBuilder reply) {
+        var session = setupScheduleService.getSession(id);
+        if (session == null) {
+            reply.append("予定を立てていません。");
+            return;
+        }
+        if(session.getActions() == null) {
+            reply.append("下書きが選択されていません。\n");
+            return;
+        }
+        setupScheduleService.confirm(id);
+        reply.append("編集中の予定を確定しました。\n");
+    }
+
+    public void setDestination(String id, StringBuilder reply, String destination) {
+        var session = setupScheduleService.getSession(id);
+        if (session == null) {
+            reply.append("予定を立てていません。");
+            return;
+        }
+        if (destination == null) {
+            reply.append("活動場所を教えてください。\n 例: \n @bot \n 渋谷で遊びたい！");
             return;
         }
         setupScheduleService.setLocation(id, destination);
-        send(id, "活動場所を「" + destination +"」設定しました。");
+        reply.append("活動場所を「").append(destination).append("」に設定しました。\n");
     }
 
-    public void searchSpots(String id, String text) throws IOException, InterruptedException, ApiException {
+    public void searchSpots(String id, StringBuilder reply, String text) throws IOException, InterruptedException, ApiException {
         var session = setupScheduleService.getSession(id);
-        if(session == null) {
-            send(id, "予定を立てていません。");
+        if (session == null) {
+            reply.append("予定を立てていません。");
             return;
         }
-        if(session.getLocation() == null) {
-            send(id, "活動場所を教えてください。\n 例: \n @bot \n 渋谷で遊びたい！");
+        if (session.getLocation() == null) {
+            reply.append("活動場所を設定してください。\n 例: \n @bot \n 渋谷で遊びたい！");
             return;
         }
-        if(text == null) {
-            send(id, "何をしたいか教えてください。\n 例: \n @bot \n 焼肉食べたい！");
+        if (text == null) {
+            reply.append("何をしたいか教えてください。\n 例: \n @bot \n 焼肉食べたい！");
             return;
         }
         ShopCategory category = functionCallService.pickup(text);
-        send(id, "「" + session.getLocation() + "」周辺の" + "「" + category.getValue() + "」" + "を調査します。");
-        var results = Arrays.stream(googleMapsService.getShopInfo(session.getLocation(), category)).limit(5).toList();
+        reply.append("「").append(session.getLocation()).append("」周辺の").append("「").append(category.getValue()).append("」").append("を調査します。\n");
+        var results = new ArrayList<>(Arrays.stream(googleMapsService.getShopInfo(session.getLocation(), category)).limit(5).toList());
         session.setResults(results);
-        send(id, results.stream().map(place -> place.name).collect(Collectors.joining("\n")));
+        reply.append(results.stream().map(place -> place.name).collect(Collectors.joining("\n")));
+        reply.append("\n");
+        reply.append("調査結果を採用するか、不要な物を削除してください。");
     }
 
-    public void removeSpot(String id, String messageText) {
-        if (!setupScheduleService.isStarted(id)) {
-            send(id, "予定を立てていません。");
+    public void removeSpot(String id, StringBuilder reply, String messageText) {
+        if (!setupScheduleService.isEditting(id)) {
+            reply.append("予定を立てていません。");
             return;
         }
         var session = setupScheduleService.getSession(id);
-        if (session.getResults() == null) {
-            send(id, "調査結果がありません。");
-            return;
-        }
         var command = functionCallService.removeSpot(messageText, session.getResults());
         if (command == null) {
-            send(id, "入力内容を正しく認識できませんでした。");
+            reply.append("入力内容を正しく認識できませんでした。");
             return;
         }
-        if(command.getIndex() == -1) {
-            send(id, "入力エラーです。");
+        if (command.getSpots() == null || command.getSpots().isEmpty()) {
+            reply.append("調査結果に該当するスポットがありません。");
             return;
         }
-        session.getResults().remove(command.getIndex());
-        send(id, "削除しました。");
-        send(id, session.getResults().stream().map(place -> place.name).collect(Collectors.joining("\n")));
+        session.getResults().removeIf(place -> command.getSpots().contains(place.name));
+        reply.append(String.join(",", command.getSpots())).append("を削除しました。\n");
+        if(session.getResults().isEmpty()) {
+            reply.append("調査結果をすべて削除しました。\n");
+            session.setResults(null);
+        } else {
+            reply.append("削除した結果以下の候補が残りました。採用するか、不要なものを削除してください。\n");
+            reply.append(session.getResults().stream().map(place -> place.name).collect(Collectors.joining("\n")));
+        }
     }
 
-    public void adopt(String id) {
-        if (!setupScheduleService.isStarted(id)) {
-            send(id, "予定を立てていません。");
+    public void adopt(String id, StringBuilder reply) {
+        if (!setupScheduleService.isEditting(id)) {
+            reply.append("予定を立てていません。");
             return;
         }
         var session = setupScheduleService.getSession(id);
         if (session.getResults() == null) {
-            send(id, "調査結果がありません。");
+            reply.append("調査結果がありません。");
             return;
         }
-        session.adopt();
-        send(id, "調査結果を採用しました。");
+        session.getResultsList().add(session.getResults());
+        session.setResults(null);
+        reply.append("調査結果を採用しました。");
     }
 
-    public void draft(String id) {
-        if (!setupScheduleService.isStarted(id)) {
-            send(id, "予定を立てていません。");
+    public void showAdoptedSpots(String id, StringBuilder reply) {
+        if (!setupScheduleService.isEditting(id)) {
+            reply.append("予定を立てていません。");
             return;
         }
         var session = setupScheduleService.getSession(id);
-        if (session.getActions() == null) {
-            send(id, "調査結果がありません。");
+        if (session.getResultsList().size() == 0) {
+            reply.append("採用した調査結果がありません。");
             return;
         }
-        send(id, """
-                        草案を作成しました。
-                        採用する案を決めてください
-                        """);
+        reply.append("採用したスポットは以下の通りです。\n");
+        for(var results : session.getResultsList()) {
+            for(var result : results) {
+                reply.append(result.name).append("\n");
+            }
+            reply.append("\n");
+        }
+    }
+
+    public void draft(String id, StringBuilder reply) {
+        if (!setupScheduleService.isEditting(id)) {
+            reply.append("予定を立てていません。");
+            return;
+        }
+        var session = setupScheduleService.getSession(id);
+        if (session.getResultsList().size() == 0) {
+            reply.append("採用した調査結果がありません。");
+            return;
+        }
+        reply.append("草案を作成しました。\n");
+        reply.append("採用する案を決めてください。\n");
 
         setupScheduleService.draft(id);
         for (int i = 0; i < session.getDrafts().size(); i++) {
-            send(id, "草案" + i + "\n" + session.getDrafts().get(i).stream().map(Action::getName).collect(Collectors.joining("\n")));
+            reply.append("草案").append(i + 1).append(":\n");
+            reply.append(session.getDrafts().get(i).stream().map(Action::getName).collect(Collectors.joining("\n↓\n")));
+            reply.append("\n\n");
         }
     }
 
-    public void decideDraft(String id, String messageText) {
-        if (!setupScheduleService.isStarted(id)) {
-            send(id, "予定を立てていません。");
+    public void decideDraft(String id, StringBuilder reply, String messageText) throws IOException, InterruptedException, ApiException {
+        if (!setupScheduleService.isEditting(id)) {
+            reply.append("予定を立てていません。");
             return;
         }
         var session = setupScheduleService.getSession(id);
         if (session.getDrafts() == null) {
-            send(id, "草案がありません。");
+            reply.append("草案がありません。");
             return;
         }
         var command = functionCallService.decideDraft(messageText, session.getDrafts());
         if (command == null) {
-            send(id, "入力内容を正しく認識できませんでした。");
+            reply.append("入力内容を正しく認識できませんでした。");
             return;
         }
-        if(command.getIndex() == -1) {
-            send(id, "入力エラーです。");
+        if (command.getIndex() <= 0) {
+            reply.append("該当する予定がありません。");
             return;
         }
-        session.setActions(session.getDrafts().get(command.getIndex()));
-        send(id, "草案を確定しました。");
+        setupScheduleService.decideDraft(session, session.getDrafts().get(command.getIndex() - 1));
+        reply.append("草案を確定しました。");
     }
 
-    public void editAndAddSpotFromDecidedDraft(String id, String messageText) throws IOException, InterruptedException, ApiException {
-        if (!setupScheduleService.isStarted(id)) {
-            send(id, "予定を立てていません。");
+    public void editAndAddSpotFromDecidedDraft(String id, StringBuilder reply, String messageText) throws IOException, InterruptedException, ApiException {
+        if (!setupScheduleService.isEditting(id)) {
+            reply.append("予定を立てていません。");
             return;
         }
         var session = setupScheduleService.getSession(id);
         if (session.getActions() == null) {
-            send(id, "草案を確定させていません。");
+            reply.append("草案を確定させていません。");
             return;
         }
         var command = functionCallService.editAndAddSpotToDecidedDraft(messageText, session.getActions());
         if (command == null) {
-            send(id, "入力内容を正しく認識できませんでした。");
+            reply.append("入力内容を正しく認識できませんでした。");
             return;
         }
-        if(command.getIndex() == -1) {
-            send(id, "入力エラーです。追加する場所が指定されていません。");
+        if (command.getIndex() <= -1) {
+            reply.append("追加する場所が指定されていません。");
             return;
         }
-        if(command.getName() == null) {
-            send(id, "入力エラーです。追加する場所が指定されていません。");
+        if (command.getName() == null) {
+            reply.append("追加する場所が指定されていません。");
             return;
         }
         var results = googleMapsService.getShopInfo(session.getLocation(), new ShopCategory(command.getName()));
         if (results.length == 0) {
-            send(id, session.getLocation() + "近辺の" + command.getName() + "は見つかりませんでした。");
+            reply.append(session.getLocation()).append("近辺の").append(command.getName()).append("は見つかりませんでした。");
             return;
         }
         var action = new Action();
         action.setName(results[0].name);
         action.setLocation(results[0].formattedAddress);
         session.getActions().add(command.getIndex(), action);
+        reply.append("追加しました。\n");
+        reply.append(session.getActions().stream().map(Action::getName).collect(Collectors.joining("\n")));
     }
 
-    public void editAndRemoveSpotFromDecidedDraft(String id, String messageText) {
-        if (!setupScheduleService.isStarted(id)) {
-            send(id, "予定を立てていません。");
+    public void editAndRemoveSpotFromDecidedDraft(String id, StringBuilder reply, String messageText) {
+        if (!setupScheduleService.isEditting(id)) {
+            reply.append("予定を立てていません。");
             return;
         }
         var session = setupScheduleService.getSession(id);
         if (session.getActions() == null) {
-            send(id, "草案を確定させていません。");
+            reply.append("草案を確定させていません。");
             return;
         }
         var command = functionCallService.editAndRemoveSpotFromDecidedDraft(messageText, session.getActions());
         if (command == null) {
-            send(id, "入力内容を正しく認識できませんでした。");
+            reply.append("入力内容を正しく認識できませんでした。");
             return;
         }
-        if(command.getIndex() == -1) {
-            send(id, "入力エラーです。削除する場所が指定されていません。");
+        if (command.getSpots() == null || command.getSpots().isEmpty()) {
+            reply.append("削除する場所が指定されていません。");
             return;
         }
-        session.getActions().remove(command.getIndex());
+        session.getActions().removeIf(action -> command.getSpots().contains(action.getName()));
+        reply.append("削除しました");
+        reply.append(session.getActions().stream().map(Action::getName).collect(Collectors.joining("\n")));
+
+
+        reply.append(String.join(",", command.getSpots())).append("を削除しました。\n");
+        if(session.getResults().isEmpty()) {
+            reply.append("草案を破棄しました。\n");
+            session.setActions(null);
+        } else {
+            reply.append("削除した結果以下の草案になりました。確定、スポット追加、スポット削除、順番入れ替えの中から選んで操作してください\n");
+            reply.append(session.getResults().stream().map(place -> place.name).collect(Collectors.joining("\n")));
+        }
     }
 
-    public void editAndChangeSpotFromDecidedDraft(String id, String messageText) {
-        if (!setupScheduleService.isStarted(id)) {
-            send(id, "予定を立てていません。");
+    public void editAndChangeSpotFromDecidedDraft(String id, StringBuilder reply, String messageText) {
+        if (!setupScheduleService.isEditting(id)) {
+            reply.append("予定を立てていません。");
             return;
         }
         var session = setupScheduleService.getSession(id);
         if (session.getActions() == null) {
-            send(id, "草案を確定させていません。");
+            reply.append("草案を確定させていません。");
             return;
         }
         var command = functionCallService.editAndChangeSpotFromDecidedDraft(messageText, session.getActions());
         if (command == null) {
-            send(id, "入力内容を正しく認識できませんでした。");
+            reply.append("入力内容を正しく認識できませんでした。");
             return;
         }
-        if(command.getFromIndex() == -1) {
-            send(id, "入力エラーです。変更する場所が指定されていません。");
+        if (command.getFromIndex() == -1) {
+            reply.append("変更する場所が指定されていません。");
             return;
         }
-        if(command.getToIndex() == -1) {
-            send(id, "入力エラーです。変更する場所が指定されていません。");
+        if (command.getToIndex() == -1) {
+            reply.append("変更先の場所が指定されていません。");
             return;
         }
         var action = session.getActions().get(command.getFromIndex());
         session.getActions().remove(command.getFromIndex());
         session.getActions().add(command.getToIndex(), action);
+        reply.append("入れ替えました\n");
+        reply.append(session.getActions().stream().map(Action::getName).collect(Collectors.joining("\n")));
     }
 
-//    @EventMapping
-    public TextMessage handleTextMessageEvent(MessageEvent<TextMessageContent> event) throws InterruptedException, IOException, ApiException {
-        Source source = event.getSource();
-        var messageText = event.getMessage().getText();
-        if (!messageText.contains("@Moon")) return null;
-        String[] lines = messageText.split("\n");
-        String contentText = Arrays.stream(lines).skip(1).collect(Collectors.joining("\n"));
-        String[] args = Arrays.stream(lines[0].split(" ")).skip(1).toArray(String[]::new);
-
-        if (!(source instanceof GroupSource groupSource)) return null;
-
-        String id = groupSource.getGroupId();
-        // メンションに反応する処理
-        switch (args[0]) {
-            case "予定" -> {
-                if (setupScheduleService.isStarted(id)) {
-                    send(id, "既に予定を立てています。");
-                    return null;
-                }
-                setupScheduleService.debug(id, new ArrayList<>(Collections.singletonList(source.getSenderId())));
-                send(id, "予定を立てました。");
-                send(id, "活動場所を教えてください。@bot 場所 [場所]");
-                send(id, "例: @bot 場所 渋谷");
-            }
-            case "場所" -> {
-                if (!setupScheduleService.isStarted(id)) {
-                    send(id, "予定を立てていません。");
-                    return null;
-                }
-                send(id, "場所を設定しました。");
-                setupScheduleService.setLocation(id, args[1]);
-            }
-            case "調査" -> {
-                if (!setupScheduleService.isStarted(id)) {
-                    send(id, "予定を立てていません。");
-                    return null;
-                }
-                var session = setupScheduleService.getSession(id);
-                if (session.getLocation() == null) {
-                    send(id, "場所を設定していません。");
-                    return null;
-                }
-                ShopCategory category = functionCallService.pickup(args[1]);
-                send(id, "「" + session.getLocation() + "」周辺の" + "「" + category.getValue() + "」" + "を調査します。");
-                session.setResults(Arrays.asList(googleMapsService.getShopInfo(session.getLocation(), category)));
-                send(id, session.getResults().stream().map(place -> place.name).collect(Collectors.joining("\n")));
-            }
-            case "削除" -> {
-                if (!setupScheduleService.isStarted(id)) {
-                    send(id, "予定を立てていません。");
-                    return null;
-                }
-                var session = setupScheduleService.getSession(id);
-                if (session.getResults() == null) {
-                    send(id, "調査結果がありません。");
-                    return null;
-                }
-                int index;
-                try {
-                    index = Integer.parseInt(args[1]);
-                } catch (NumberFormatException exception) {
-                    send(id, "数字を入力してください。");
-                    return null;
-                }
-                if (index < 0 || index >= session.getResults().size()) {
-                    send(id, "数字が範囲外です。");
-                    return null;
-                }
-                session.getResults().remove(index);
-                send(id, "削除しました。");
-                send(id, session.getResults().stream().map(place -> place.name).collect(Collectors.joining("\n")));
-            }
-            case "採用" -> {
-                if (!setupScheduleService.isStarted(id)) {
-                    send(id, "予定を立てていません。");
-                    return null;
-                }
-                var session = setupScheduleService.getSession(id);
-                if (session.getResults() == null) {
-                    send(id, "調査結果がありません。");
-                    return null;
-                }
-                session.adopt();
-                send(id, "調査結果を採用しました。");
-            }
-//            case "追加" -> {
-//                if (!setupScheduleService.isStarted(id)) {
-//                    send(id, "予定を立てていません。");
-//                    return null;
-//                }
-//                var session = setupScheduleService.getSession(id);
-//                session.getActions();
-//            }
-            case "草案" -> {
-                if (!setupScheduleService.isStarted(id)) {
-                    send(id, "予定を立てていません。");
-                    return null;
-                }
-                var session = setupScheduleService.getSession(id);
-                if (session.getActions() == null) {
-                    send(id, "調査結果がありません。");
-                    return null;
-                }
-                send(id, """
-                        草案を作成しました。
-                        採用する案を決めてください
-                        """);
-
-                setupScheduleService.draft(id);
-                for (int i = 0; i < session.getDrafts().size(); i++) {
-                    send(id, "草案" + i + "\n" + session.getDrafts().get(i).stream().map(Action::getName).collect(Collectors.joining("\n")));
-                }
-            }
-            case "確定" -> {
-                if (!setupScheduleService.isStarted(id)) {
-                    send(id, "予定を立てていません。");
-                    return null;
-                }
-                var session = setupScheduleService.getSession(id);
-                if (session.getDrafts() == null) {
-                    send(id, "草案がありません。");
-                    return null;
-                }
-                int index;
-                try {
-                    index = Integer.parseInt(args[1]);
-                } catch (NumberFormatException exception) {
-                    send(id, "数字を入力してください。");
-                    return null;
-                }
-                if (index < 0 || index >= session.getDrafts().size()) {
-                    send(id, "数字が範囲外です。");
-                    return null;
-                }
-                session.setActions(session.getDrafts().get(index));
-                send(id, "草案を確定しました。");
-            }
-            case "編集追加" -> {
-                if (!setupScheduleService.isStarted(id)) {
-                    send(id, "予定を立てていません。");
-                    return null;
-                }
-                var session = setupScheduleService.getSession(id);
-                if (session.getActions() == null) {
-                    send(id, "草案を確定させていません。");
-                    return null;
-                }
-                int index;
-                try {
-                    index = Integer.parseInt(args[1]);
-                } catch (NumberFormatException exception) {
-                    send(id, "数字を入力してください。");
-                    return null;
-                }
-                if (index < 0 || index > session.getActions().size()) {
-                    send(id, "数字が範囲外です。");
-                    return null;
-                }
-                String name = args[2];
-                var results = googleMapsService.getShopInfo(session.getLocation(), new ShopCategory(name));
-                if (results.length == 0) {
-                    send(id, session.getLocation() + "近辺の" + name + "は見つかりませんでした。");
-                    return null;
-                }
-                var action = new Action();
-                action.setName(results[0].name);
-                action.setLocation(results[0].formattedAddress);
-                session.getActions().add(index, action);
-            }
-            case "編集削除" -> {
-                if (!setupScheduleService.isStarted(id)) {
-                    send(id, "予定を立てていません。");
-                    return null;
-                }
-                var session = setupScheduleService.getSession(id);
-                if (session.getActions() == null) {
-                    send(id, "草案を確定させていません。");
-                    return null;
-                }
-                int index;
-                try {
-                    index = Integer.parseInt(args[1]);
-                } catch (NumberFormatException exception) {
-                    send(id, "数字を入力してください。");
-                    return null;
-                }
-                if (index < 0 || index >= session.getActions().size()) {
-                    send(id, "数字が範囲外です。");
-                    return null;
-                }
-                session.getActions().remove(index);
-            }
-            default -> {
-                send(id, """
-                        使い方:
-                        @bot 予定
-                        @bot 確定
-                        @bot 編集
-                        @bot 調査
-                        @bot 追加
-                        """);
-            }
-        }
-        return null;
-    }
-
-    private void send(String groupId, String text) {
-        var textMessage = TextMessage.builder().text(text).build();
-        var pushMessage = new PushMessage(groupId, textMessage);
-        try {
-            BotApiResponse responce = lineMessagingClient.pushMessage(pushMessage).get();
-        } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException(e);
-        }
+    private void send(String replyToken, List<String> texts) {
+        lineMessagingClient.replyMessage(new ReplyMessage(replyToken, texts.stream().map(TextMessage::new).collect(Collectors.toList())));
     }
 }
 
