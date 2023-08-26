@@ -12,10 +12,10 @@ import java.util.List;
 
 @Value
 public class FunctionCallingBase {
-    public Class clazz;
-    public String functionName;
-    public String functionDescription;
-    public String baseMessages;
+    Class clazz;
+    String functionName;
+    String functionDescription;
+    String baseMessages;
 
     private List<ChatMessage> getMessagesList() {
         return List.of(new ChatMessage(ChatMessageRole.SYSTEM.value(), baseMessages));

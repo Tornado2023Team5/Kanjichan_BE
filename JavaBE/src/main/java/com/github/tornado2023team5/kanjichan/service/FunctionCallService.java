@@ -23,6 +23,11 @@ public class FunctionCallService {
         CommandTypeFormat format = functionCallUtil.call(text, new FunctionCallingBase(
                 CommandTypeFormat.class,
                 "detect_input_for_command", """
+                        分類したコマンドを返す関数。ここでプログラマーはコマンドの入力内容を取得します。
+                        """, """
+                        あなたは旅行者の旅行計画を補助するBOTです。
+                        ユーザーの入力がコマンドのどれに当てはまるか分類してください。
+                        
                         MakePlan: 旅行計画を作成します。
                         SetLocation: 計画の目的地を設定します。
                         SearchSpots: 計画の観光スポット、遊び場を検索します。
@@ -34,9 +39,6 @@ public class FunctionCallService {
                         EditAndRemoveSpotFromDecidedDraft: 選択した下書きからスポットを削除します。
                         EditAndChangeSpotFromDecidedDraft: 選択した下書きのスポットの順番を入れ替えます。。
                         None: どのコマンドにも当てはまらない場合です。
-                        """, """
-                        あなたは旅行者の旅行計画を補助するBOTです。
-                        ユーザーの入力がコマンドのどれに当てはまるか分類してください。
                         """
         ));
         return new CommandInformationFormat(format.getCommandType(), text);

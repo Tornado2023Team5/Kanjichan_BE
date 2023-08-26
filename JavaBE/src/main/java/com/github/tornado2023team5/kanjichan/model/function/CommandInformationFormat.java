@@ -1,10 +1,12 @@
 package com.github.tornado2023team5.kanjichan.model.function;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Value;
 
-@Value
+@Data
+@AllArgsConstructor
 public class CommandInformationFormat {
-    public CommandType commandType;
-    public String information;
+    private CommandType commandType;
+    private String information;
 }

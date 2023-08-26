@@ -1,4 +1,4 @@
-package com.github.tornado2023team5.kanjichan.model.function;
+package com.github.tornado2023team5.kanjichan.model;
 
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import lombok.Value;
