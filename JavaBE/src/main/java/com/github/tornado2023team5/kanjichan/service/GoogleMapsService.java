@@ -1,7 +1,7 @@
 package com.github.tornado2023team5.kanjichan.service;
 
 import com.github.tornado2023team5.kanjichan.model.Address;
-import com.github.tornado2023team5.kanjichan.model.ShopCategory;
+import com.github.tornado2023team5.kanjichan.model.function.ShopCategory;
 import com.google.maps.GeoApiContext;
 import com.google.maps.GeocodingApi;
 import com.google.maps.PlaceDetailsRequest;
