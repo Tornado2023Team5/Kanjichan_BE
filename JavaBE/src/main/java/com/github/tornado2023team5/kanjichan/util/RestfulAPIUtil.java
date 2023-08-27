@@ -16,10 +16,11 @@ import java.util.List;
 @Service
 public class RestfulAPIUtil {
     private final RestTemplate restTemplate;
+    private static final String BASE_URL = "http://db_server:4000";
 
     public <T> T get(String endpoint) {
         var response = restTemplate.exchange(
-                endpoint,
+                BASE_URL + endpoint,
                 HttpMethod.GET,
                 null,
                 new ParameterizedTypeReference<T>() {}
@@ -29,7 +30,7 @@ public class RestfulAPIUtil {
 
     public <T, R> T post(String endpoint, R request) {
         var response = restTemplate.exchange(
-                endpoint,
+                BASE_URL + endpoint,
                 HttpMethod.POST,
                 new HttpEntity<>(request),
                 new ParameterizedTypeReference<T>() {}

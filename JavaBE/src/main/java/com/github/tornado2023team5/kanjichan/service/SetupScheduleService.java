@@ -23,8 +23,8 @@ public class SetupScheduleService {
 
     public void start(String id, List<String> lineIds) {
         var session = new AsobiPlanningSession();
-        Asobi asobi = restfulAPIUtil.get("http://localhost:4000/api/asobi/start");
-        List<User> users = restfulAPIUtil.post("http://localhost:4000/api/asobi/start", lineIds);
+        Asobi asobi = restfulAPIUtil.get("/api/asobi/start");
+        List<User> users = restfulAPIUtil.post("/api/asobi/start", lineIds);
         session.setId(asobi.getId());
         session.setUsers(users);
         sessions.put(id, session);
@@ -50,7 +50,7 @@ public class SetupScheduleService {
         asobi.setId(session.getId());
         asobi.setActions(session.getActions());
         asobi.setParticipants(session.getUsers());
-        restfulAPIUtil.post("http://localhost:4000/api/asobi/start", asobi);
+        restfulAPIUtil.post("/api/asobi", asobi);
         sessions.remove(id);
     }
 
