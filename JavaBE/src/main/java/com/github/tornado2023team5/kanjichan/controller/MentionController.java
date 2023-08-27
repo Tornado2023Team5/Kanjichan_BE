@@ -14,6 +14,7 @@ import com.linecorp.bot.model.event.message.TextMessageContent;
 import com.linecorp.bot.model.event.source.GroupSource;
 import com.linecorp.bot.model.event.source.Source;
 import com.linecorp.bot.model.message.TextMessage;
+import com.linecorp.bot.model.profile.MembersIdsResponse;
 import com.linecorp.bot.spring.boot.annotation.EventMapping;
 import com.linecorp.bot.spring.boot.annotation.LineMessageHandler;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 @LineMessageHandler
@@ -42,6 +44,7 @@ public class MentionController {
         if(!(message instanceof TextMessageContent textContent)) return null;
         var messageText = textContent.getText();
         StringBuilder reply = new StringBuilder();
+
         if (!messageText.contains("@Moon")) return null;
 
         String[] lines = messageText.split("\n");
@@ -50,6 +53,8 @@ public class MentionController {
 
 
         if (!(source instanceof GroupSource groupSource)) return null;
+
+        printMembersIds(groupSource.getGroupId());
 //        https://a054-2400-4051-1985-5900-b8cc-e196-ecfd-4b3d.ngrok-free.app/callback
         String id = groupSource.getGroupId();
         CommandInformationFormat format = functionCallService.detect(messageText.replace("@Moon", ""), commandList(id));
@@ -84,6 +89,18 @@ public class MentionController {
             case EDIT_AND_CHANGE_SPOT_FROM_DECIDED_DRAFT -> editAndChangeSpotFromDecidedDraft(id, reply, messageText);
         }
         return new TextMessage(reply.toString());
+    }
+
+    public void printMembersIds(String groupId) {
+        MembersIdsResponse members;
+        try {
+            members = lineMessagingClient.getGroupMembersIds(groupId, null).get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+        }
+        for (String member : members.getMemberIds()) {
+            System.out.println(member);
+        }
     }
 
     public String commandList(String id) {
