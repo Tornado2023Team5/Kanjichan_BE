@@ -48,8 +48,9 @@ public class MentionController {
         String contentText = Arrays.stream(lines).skip(1).collect(Collectors.joining("\n"));
         String[] args = Arrays.stream(lines[0].split(" ")).skip(1).toArray(String[]::new);
 
-        if (!(source instanceof GroupSource groupSource)) return null;
 
+        if (!(source instanceof GroupSource groupSource)) return null;
+//        https://a054-2400-4051-1985-5900-b8cc-e196-ecfd-4b3d.ngrok-free.app/callback
         String id = groupSource.getGroupId();
         CommandInformationFormat format = functionCallService.detect(messageText.replace("@Moon", ""), commandList(id));
         reply.append(format.getCommandType()).append("\n\n");
@@ -103,7 +104,7 @@ public class MentionController {
         if(session.getResults() != null) {
             complete.append("SEARCH_SPOTS: 計画の観光スポット、遊び場を検索します。\n");
             complete.append("REMOVE_SPOT: 検索したスポットから選択したものを削除します。\n");
-            complete.append("ADOPT_SPOT: 検索したスポットを採用します。\n");
+            complete.append("ADOPT_SPOTS: 検索したスポットを採用します。\n");
         }
 
         if(session.getResultsList().size() == 0) {

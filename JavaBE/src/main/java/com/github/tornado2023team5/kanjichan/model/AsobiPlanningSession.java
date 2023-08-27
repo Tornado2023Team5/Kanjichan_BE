@@ -15,7 +15,7 @@ public class AsobiPlanningSession {
     List<Asobi> asobis;
     List<Action> actions;
     String location;
-    List<User> users;
+    List<String> users;
     List<PlacesSearchResult> results;
     List<List<PlacesSearchResult>> resultsList = new ArrayList<>();
     List<List<Action>> drafts;

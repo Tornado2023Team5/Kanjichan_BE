@@ -1,5 +1,6 @@
 package com.github.tornado2023team5.kanjichan.util;
 
+import com.github.tornado2023team5.kanjichan.entity.Asobi;
 import com.github.tornado2023team5.kanjichan.entity.Schedule;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.UtilityClass;
@@ -16,7 +17,8 @@ import java.util.List;
 @Service
 public class RestfulAPIUtil {
     private final RestTemplate restTemplate;
-    private static final String BASE_URL = "http://db_server:4000";
+//    private static final String BASE_URL = "http://db_server:4000";
+    private static final String BASE_URL = "https://moon-usa.jp";
 
     public <T> T get(String endpoint) {
         var response = restTemplate.exchange(

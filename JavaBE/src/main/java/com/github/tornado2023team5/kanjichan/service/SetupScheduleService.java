@@ -2,13 +2,18 @@ package com.github.tornado2023team5.kanjichan.service;
 
 import com.github.tornado2023team5.kanjichan.entity.Action;
 import com.github.tornado2023team5.kanjichan.entity.Asobi;
+import com.github.tornado2023team5.kanjichan.entity.LineId;
 import com.github.tornado2023team5.kanjichan.entity.User;
 import com.github.tornado2023team5.kanjichan.model.AsobiPlanningSession;
 import com.github.tornado2023team5.kanjichan.model.function.ShopCategory;
 import com.github.tornado2023team5.kanjichan.util.RestfulAPIUtil;
 import com.google.maps.errors.ApiException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
 import java.text.ParseException;
@@ -19,27 +24,20 @@ import java.util.*;
 @RequiredArgsConstructor
 public class SetupScheduleService {
     private final RestfulAPIUtil restfulAPIUtil;
+    private final RestTemplate restTemplate;
+    //    private static final String BASE_URL = "http://db_server:4000";
+    private static final String BASE_URL = "https://moon-usa.jp";
     private final static Random random = new Random();
     public static final HashMap<String, AsobiPlanningSession> sessions = new HashMap<>();
     private final GoogleMapsService googleMapsService;
 
     public void start(String id, String lineId) {
         var session = new AsobiPlanningSession();
-        Asobi asobi = restfulAPIUtil.get("/api/asobi/start");
+        Asobi asobi = restTemplate.getForObject(BASE_URL + "/api/asobi/start", Asobi.class);
         session.setId(asobi.getId());
         session.setUsers(new ArrayList<>());
         sessions.put(id, session);
         addUser(id, lineId);
-    }
-
-    public void debug(String id, List<String> lineIds) {
-        var session = new AsobiPlanningSession();
-        Asobi asobi = new Asobi();
-        asobi.setId(id);
-        List<User> users = Arrays.asList(new User(), new User());
-        session.setId(asobi.getId());
-        session.setUsers(users);
-        sessions.put(id, session);
     }
 
     public void reset(String id) {
@@ -47,7 +45,7 @@ public class SetupScheduleService {
     }
 
     public void addUser(String id, String lineId) {
-        User user = restfulAPIUtil.get("/api/lineId?lineIds=" + lineId);
+        var user = restTemplate.getForObject(BASE_URL + "/api/lineId/" + lineId, String.class);
         sessions.get(id).getUsers().add(user);
     }
 
@@ -56,7 +54,7 @@ public class SetupScheduleService {
         var asobi = new Asobi();
         asobi.setId(session.getId());
         asobi.setActions(session.getActions());
-        asobi.setParticipants(session.getUsers());
+        asobi.setParticipantIds(session.getUsers());
         var actions = asobi.getActions();
 
         var baseTime = "2023-08-25T15:00:00.000Z";
@@ -71,7 +69,7 @@ public class SetupScheduleService {
             date.setTime(date.getTime() + threeHoursInMillis);
             action.setEnd(sdf.format(date));
         }
-        restfulAPIUtil.post("/api/asobi", asobi);
+        restTemplate.postForObject(BASE_URL + "/api/asobi",asobi, Asobi.class);
         sessions.remove(id);
     }
 

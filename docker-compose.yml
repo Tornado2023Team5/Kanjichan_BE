@@ -2,7 +2,7 @@ services:
   java:
     working_dir: /opt
     image: gradle:latest
-    env_file: ./JavaBE/.env
+    env_file: ./.env
     tty: true
     ports:
       - "8080:8080"
