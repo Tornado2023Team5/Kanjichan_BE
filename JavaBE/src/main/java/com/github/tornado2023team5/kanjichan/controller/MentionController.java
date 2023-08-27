@@ -54,7 +54,7 @@ public class MentionController {
 
         if (!(source instanceof GroupSource groupSource)) return null;
 
-        printMembersIds(groupSource.getGroupId());
+//        printMembersIds(groupSource.getGroupId());
 //        https://a054-2400-4051-1985-5900-b8cc-e196-ecfd-4b3d.ngrok-free.app/callback
         String id = groupSource.getGroupId();
         CommandInformationFormat format = functionCallService.detect(messageText.replace("@Moon", ""), commandList(id));
