@@ -44,6 +44,11 @@ public class SetupScheduleService {
         sessions.remove(id);
     }
 
+    public void addUser(String id, String lineId) {
+        User user = restfulAPIUtil.get("/api/lineId?lineIds=" + lineId);
+        sessions.get(id).getUsers().add(user);
+    }
+
     public void confirm(String id) {
         var session = sessions.get(id);
         var asobi = new Asobi();
