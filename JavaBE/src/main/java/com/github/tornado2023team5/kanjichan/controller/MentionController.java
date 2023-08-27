@@ -54,10 +54,11 @@ public class MentionController {
         reply.append(format.getCommandType()).append("\n\n");
         switch (format.getCommandType()) {
             case NONE -> reply.append("入力内容を正しく認識できませんでした。");
+            case JOIN_PLAN -> joinPlan(id, reply, source.getUserId());
             case MAKE_PLAN -> {
                 var command = functionCallService.makePlan(messageText);
                 if (command == null) return new TextMessage(reply + "入力内容を正しく認識できませんでした。");
-                makePlan(id, reply, command);
+                makePlan(id, reply, command, source.getUserId());
             }
             case RESET_PLAN -> resetPlan(id, reply);
             case CONFIRM_PLAN -> confirmPlan(id, reply);
@@ -96,6 +97,7 @@ public class MentionController {
         var session = setupScheduleService.getSession(id);
 
         complete.append("SET_LOCATION: 計画の目的地を設定します。\n");
+        complete.append("JOIN_PLAN: 旅行計画、遊び計画のメンバーに参加します。\n");
 
         if(session.getResults() != null) {
             complete.append("SEARCH_SPOTS: 計画の観光スポット、遊び場を検索します。\n");
@@ -124,12 +126,22 @@ public class MentionController {
         return complete.toString();
     }
 
-    public void makePlan(String id, StringBuilder reply, MakePlanCommand command) throws IOException, InterruptedException, ApiException {
+    public void joinPlan(String id, StringBuilder reply, String lineId) throws IOException, InterruptedException, ApiException {
+        var session = setupScheduleService.getSession(id);
+        if (session == null) {
+            reply.append("予定を立てていません。");
+            return;
+        }
+        setupScheduleService.addUser(id, lineId);
+        reply.append("予定の参加者として登録しました。\n");
+    }
+
+    public void makePlan(String id, StringBuilder reply, MakePlanCommand command, String lineId) throws IOException, InterruptedException, ApiException {
         if (setupScheduleService.isEditting(id)) {
             reply.append("既に予定を立てています。");
             return;
         }
-        setupScheduleService.debug(id, new ArrayList<>());
+        setupScheduleService.start(id, lineId);
         reply.append("予定を立てる準備をしました。\n");
         setDestination(id, reply, command.getDestination());
         searchSpots(id, reply, command.getCategory());

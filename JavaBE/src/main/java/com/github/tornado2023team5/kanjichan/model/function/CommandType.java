@@ -1,6 +1,7 @@
 package com.github.tornado2023team5.kanjichan.model.function;
 
 public enum CommandType {
+    JOIN_PLAN,
     MAKE_PLAN,
     RESET_PLAN,
     CONFIRM_PLAN,

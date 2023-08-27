@@ -14,6 +14,7 @@ public class CommandTypeFormat {
     @JsonPropertyDescription("""
             ユーザー入力の元呼び出すコマンド。
             
+            'JOIN_PLAN',
             'MAKE_PLAN',
             'RESET_PLAN'
             'CONFIRM_PLAN',

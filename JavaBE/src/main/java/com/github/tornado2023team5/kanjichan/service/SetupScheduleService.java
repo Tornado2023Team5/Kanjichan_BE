@@ -21,13 +21,13 @@ public class SetupScheduleService {
     public static final HashMap<String , AsobiPlanningSession> sessions = new HashMap<>();
     private final GoogleMapsService googleMapsService;
 
-    public void start(String id, List<String> lineIds) {
+    public void start(String id, String lineId) {
         var session = new AsobiPlanningSession();
         Asobi asobi = restfulAPIUtil.get("/api/asobi/start");
-        List<User> users = restfulAPIUtil.post("/api/asobi/start", lineIds);
         session.setId(asobi.getId());
-        session.setUsers(users);
+        session.setUsers(new ArrayList<>());
         sessions.put(id, session);
+        addUser(id, lineId);
     }
 
     public void debug(String id, List<String> lineIds) {
