@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 @Service
@@ -18,7 +20,7 @@ import java.util.*;
 public class SetupScheduleService {
     private final RestfulAPIUtil restfulAPIUtil;
     private final static Random random = new Random();
-    public static final HashMap<String , AsobiPlanningSession> sessions = new HashMap<>();
+    public static final HashMap<String, AsobiPlanningSession> sessions = new HashMap<>();
     private final GoogleMapsService googleMapsService;
 
     public void start(String id, String lineId) {
@@ -49,12 +51,26 @@ public class SetupScheduleService {
         sessions.get(id).getUsers().add(user);
     }
 
-    public void confirm(String id) {
+    public void confirm(String id) throws ParseException {
         var session = sessions.get(id);
         var asobi = new Asobi();
         asobi.setId(session.getId());
         asobi.setActions(session.getActions());
         asobi.setParticipants(session.getUsers());
+        var actions = asobi.getActions();
+
+        var baseTime = "2023-08-25T15:00:00.000Z";
+        var sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+        sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+        Date date = sdf.parse(baseTime);
+        long threeHoursInMillis = 3 * 60 * 60 * 1000;
+
+        for (Action action : actions) {
+            date.setTime(date.getTime() + threeHoursInMillis);
+            action.setStart(sdf.format(date));
+            date.setTime(date.getTime() + threeHoursInMillis);
+            action.setEnd(sdf.format(date));
+        }
         restfulAPIUtil.post("/api/asobi", asobi);
         sessions.remove(id);
     }
@@ -75,10 +91,10 @@ public class SetupScheduleService {
         List<List<Action>> drafts = new ArrayList<>();
         var session = getSession(id);
         // 草案を4つ作成する
-        for (int i = 0 ; i < 5 ; i++) {
+        for (int i = 0; i < 5; i++) {
             var draft = new ArrayList<Action>();
             // 各採用スポットからランダムに1つづつ選ぶ
-            for(var actions : session.getResultsList()) {
+            for (var actions : session.getResultsList()) {
                 var result = actions.get(random.nextInt(actions.size()));
                 var action = new Action();
                 action.setName(result.name);

@@ -20,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -35,7 +36,7 @@ public class MentionController {
     private final GoogleMapsService googleMapsService;
 
     @EventMapping
-    public TextMessage formatInput(MessageEvent event) throws InterruptedException, IOException, ApiException {
+    public TextMessage formatInput(MessageEvent event) throws InterruptedException, IOException, ApiException, ParseException {
         Source source = event.getSource();
         var message = event.getMessage();
         if(!(message instanceof TextMessageContent textContent)) return null;
@@ -157,7 +158,7 @@ public class MentionController {
         reply.append("編集中の予定をリセットし、全ての情報を削除しました。\n");
     }
 
-    public void confirmPlan(String id, StringBuilder reply) {
+    public void confirmPlan(String id, StringBuilder reply) throws ParseException {
         var session = setupScheduleService.getSession(id);
         if (session == null) {
             reply.append("予定を立てていません。");

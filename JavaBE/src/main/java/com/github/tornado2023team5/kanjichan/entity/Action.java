@@ -13,9 +13,9 @@ public class Action {
 
     private String description;
 
-    private LocalDateTime start;
+    private String start;
 
-    private LocalDateTime end;
+    private String end;
 
     private String location;
 
