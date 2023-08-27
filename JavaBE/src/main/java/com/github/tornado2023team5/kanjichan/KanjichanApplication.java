@@ -8,7 +8,7 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
 
-@SpringBootApplication
+@SpringBootApplication()
 public class KanjichanApplication {
 
     public static void main(String[] args) {
