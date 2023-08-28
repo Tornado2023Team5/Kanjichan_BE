@@ -9,9 +9,4 @@ public class HealthCheckController {
     public String health() {
         return "OK";
     }
-
-    @GetMapping("/callback/ping")
-    public void health2() {
-        System.out.println("OK");
-    }
 }

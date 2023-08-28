@@ -1,9 +1,6 @@
 package com.github.tornado2023team5.kanjichan.service;
 
-import com.github.tornado2023team5.kanjichan.entity.Action;
-import com.github.tornado2023team5.kanjichan.entity.Asobi;
-import com.github.tornado2023team5.kanjichan.entity.LineId;
-import com.github.tornado2023team5.kanjichan.entity.User;
+import com.github.tornado2023team5.kanjichan.entity.*;
 import com.github.tornado2023team5.kanjichan.model.AsobiPlanningSession;
 import com.github.tornado2023team5.kanjichan.model.function.ShopCategory;
 import com.github.tornado2023team5.kanjichan.util.RestfulAPIUtil;
@@ -18,7 +15,11 @@ import org.springframework.web.client.RestTemplate;
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -49,7 +50,7 @@ public class SetupScheduleService {
         sessions.get(id).getUsers().add(user);
     }
 
-    public void confirm(String id) throws ParseException {
+    public void confirm(String id) {
         var session = sessions.get(id);
         var asobi = new Asobi();
         asobi.setId(session.getId());
@@ -57,17 +58,18 @@ public class SetupScheduleService {
         asobi.setParticipantIds(session.getUsers());
         var actions = asobi.getActions();
 
-        var baseTime = "2023-08-25T15:00:00.000Z";
-        var sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
-        sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-        Date date = sdf.parse(baseTime);
-        long threeHoursInMillis = 3 * 60 * 60 * 1000;
 
-        for (Action action : actions) {
-            date.setTime(date.getTime() + threeHoursInMillis);
-            action.setStart(sdf.format(date));
-            date.setTime(date.getTime() + threeHoursInMillis);
-            action.setEnd(sdf.format(date));
+        List<LocalDateTime> freeTimes = findCommonFreeTimes(session.getUsers(), new Date());
+        if(freeTimes.size() == 0) return;
+
+        var formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+        var date = freeTimes.get(0);
+
+
+        for (int i = 0; i < actions.size(); i++) {
+            Action action = actions.get(i);
+            action.setStart(date.plusHours(3L * i).format(formatter));
+            action.setEnd(date.plusHours(3L * i + 3).format(formatter));
         }
         restTemplate.postForObject(BASE_URL + "/api/asobi",asobi, Asobi.class);
         sessions.remove(id);
@@ -108,5 +110,48 @@ public class SetupScheduleService {
         googleMapsService.sortByDistance(draft, session.getLocation() + "駅");
         session.setActions(draft);
         session.setDrafts(null);
+    }
+
+    public List<LocalDateTime> findCommonFreeTimes(List<String> userIds, Date baseDate) {
+        RestTemplate restTemplate = new RestTemplate();
+        Map<String, List<Schedule>> userSchedulesMap = new HashMap<>();
+
+        // Calculate end date (baseDate + 14 days)
+        LocalDateTime endDateTime = baseDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime().plusDays(14);
+        Date endDate = Date.from(endDateTime.atZone(ZoneId.systemDefault()).toInstant());
+
+        for (String userId : userIds) {
+            Schedule[] schedules = restTemplate.getForObject("http://localhost:4000/api/schedule/?lineUserId={userId}&start={startDate}&end={endDate}", Schedule[].class, userId, baseDate, endDate);
+            userSchedulesMap.put(userId, List.of(schedules));
+        }
+
+        return userSchedulesMap.values().stream()
+                .flatMap(List::stream)
+                .collect(Collectors.groupingBy(Schedule::getDate, Collectors.toList()))
+                .entrySet().stream()
+                .flatMap(entry -> extractFreeSlots(entry.getKey(), entry.getValue()).stream())
+                .collect(Collectors.toList());
+    }
+
+    private List<LocalDateTime> extractFreeSlots(LocalDateTime date, List<Schedule> schedules) {
+        List<LocalDateTime> freeSlots = new ArrayList<>();
+
+        if (isFreeMorningForAll(schedules)) {
+            freeSlots.add(date.withHour(9).withMinute(0));
+        }
+
+        if (isFreeAfternoonForAll(schedules)) {
+            freeSlots.add(date.withHour(13).withMinute(0));
+        }
+
+        return freeSlots;
+    }
+
+    private boolean isFreeMorningForAll(List<Schedule> schedules) {
+        return schedules.stream().allMatch(Schedule::getMorning);
+    }
+
+    private boolean isFreeAfternoonForAll(List<Schedule> schedules) {
+        return schedules.stream().allMatch(Schedule::getAfternoon);
     }
 }

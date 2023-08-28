@@ -17,8 +17,4 @@ public class Schedule {
     private Boolean morning;
 
     private Boolean afternoon;
-
-    private User user;
-
-    private List<Asobi> asobis;
 }

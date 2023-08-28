@@ -54,8 +54,6 @@ public class MentionController {
 
         if (!(source instanceof GroupSource groupSource)) return null;
 
-//        printMembersIds(groupSource.getGroupId());
-//        https://a054-2400-4051-1985-5900-b8cc-e196-ecfd-4b3d.ngrok-free.app/callback
         String id = groupSource.getGroupId();
         CommandInformationFormat format = functionCallService.detect(messageText.replace("@Moon", ""), commandList(id));
         reply.append(format.getCommandType()).append("\n\n");
@@ -79,28 +77,13 @@ public class MentionController {
                 if (command == null) return new TextMessage(reply + "入力内容を正しく認識できませんでした。");
                 searchSpots(id, reply, command.getCategory());
             }
-            case REMOVE_SPOT -> removeSpot(id, reply, messageText);
-            case ADOPT_SPOTS -> adopt(id, reply);
+//            case REMOVE_SPOT -> removeSpot(id, reply, messageText);
+//            case ADOPT_SPOTS -> adopt(id, reply);
             case SHOW_ADOPTED_SPOTS -> showAdoptedSpots(id, reply);
-            case MAKE_DRAFT -> draft(id, reply);
-            case DECIDE_DRAFT -> decideDraft(id, reply, messageText);
-            case EDIT_AND_ADD_SPOT_TO_DECIDED_DRAFT -> editAndAddSpotFromDecidedDraft(id, reply, messageText);
-            case EDIT_AND_REMOVE_SPOT_FROM_DECIDED_DRAFT -> editAndRemoveSpotFromDecidedDraft(id, reply, messageText);
-            case EDIT_AND_CHANGE_SPOT_FROM_DECIDED_DRAFT -> editAndChangeSpotFromDecidedDraft(id, reply, messageText);
+//            case MAKE_DRAFT -> draft(id, reply);
+//            case DECIDE_DRAFT -> decideDraft(id, reply, messageText);
         }
         return new TextMessage(reply.toString());
-    }
-
-    public void printMembersIds(String groupId) {
-        MembersIdsResponse members;
-        try {
-            members = lineMessagingClient.getGroupMembersIds(groupId, null).get();
-        } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException(e);
-        }
-        for (String member : members.getMemberIds()) {
-            System.out.println(member);
-        }
     }
 
     public String commandList(String id) {
@@ -115,29 +98,13 @@ public class MentionController {
         }
         var session = setupScheduleService.getSession(id);
 
-        complete.append("SET_LOCATION: 計画の目的地を設定します。\n");
+        complete.append("SET_LOCATION: 計画の目的地、集合場所を設定します。\n");
         complete.append("JOIN_PLAN: 旅行計画、遊び計画のメンバーに参加します。\n");
+        complete.append("SEARCH_SPOTS: 計画の観光スポット、遊び場を検索します。\n");
+        complete.append("SHOW_ADOPTED_SPOTS: 採用した観光スポット、遊び場をすべて表示します。\n");
 
-        if(session.getResults() != null) {
-            complete.append("SEARCH_SPOTS: 計画の観光スポット、遊び場を検索します。\n");
-            complete.append("REMOVE_SPOT: 検索したスポットから選択したものを削除します。\n");
-            complete.append("ADOPT_SPOTS: 検索したスポットを採用します。\n");
-        }
-
-        if(session.getResultsList().size() == 0) {
-            complete.append("MAKE_DRAFT: 旅行計画の下書きを複数作成します。\n");
-            complete.append("SHOW_ADOPTED_SPOTS: 採用した観光スポット、遊び場をすべて表示します。\n");
-        }
-
-        if(session.getDrafts() != null)
-            complete.append("DECIDE_DRAFT: 複数の下書きから一つ下書きを選択します。\n");
-
-        if(session.getActions() != null) {
-            complete.append("EDIT_AND_ADD_SPOT_FROM_DECIDED_DRAFT: 選択した下書きにスポットを追加します。\n");
-            complete.append("EDIT_AND_REMOVE_SPOT_FROM_DECIDED_DRAFT: 選択した下書きからスポットを削除します。\n");
-            complete.append("EDIT_AND_CHANGE_SPOT_FROM_DECIDED_DRAFT: 選択した下書きのスポットの順番を入れ替えます。\n");
+        if(session.getActions() != null)
             complete.append("CONFIRM_PLAN: 旅行計画を確定します。\n");
-        }
 
         complete.append("RESET_PLAN: 現在計画中の旅行計画をリセットします。\n");
         complete.append("NONE: どのコマンドにも当てはまらず、入力が不正と思われるもの。\n");
@@ -162,8 +129,10 @@ public class MentionController {
         }
         setupScheduleService.start(id, lineId);
         reply.append("予定を立てる準備をしました。\n");
-        setDestination(id, reply, command.getDestination());
-        searchSpots(id, reply, command.getCategory());
+        if(command.getDestination() != null) setDestination(id, reply, command.getDestination());
+        else reply.append("集合場所を教えてください。\n");
+        if(command.getCategory() != null) searchSpots(id, reply, command.getCategory());
+        else reply.append("何をして遊ぶかを教えてください。\n");
     }
 
     public void resetPlan(String id, StringBuilder reply) {
@@ -176,18 +145,21 @@ public class MentionController {
         reply.append("編集中の予定をリセットし、全ての情報を削除しました。\n");
     }
 
-    public void confirmPlan(String id, StringBuilder reply) throws ParseException {
+    public void confirmPlan(String id, StringBuilder reply) throws IOException, InterruptedException, ApiException {
         var session = setupScheduleService.getSession(id);
         if (session == null) {
             reply.append("予定を立てていません。");
             return;
         }
-        if(session.getActions() == null) {
-            reply.append("下書きが選択されていません。\n");
+        if (session.getResultsList().size() == 0) {
+            reply.append("採用した調査結果がありません。");
             return;
         }
+        setupScheduleService.draft(id);
+        reply.append(session.getDrafts().get(0).stream().map(Action::getName).collect(Collectors.joining("\n↓\n")));
+        setupScheduleService.decideDraft(session, session.getDrafts().get(0));
         setupScheduleService.confirm(id);
-        reply.append("編集中の予定を確定しました。\n");
+        reply.append("遊び計画を確定しました。良い一日を！");
     }
 
     public void setDestination(String id, StringBuilder reply, String destination) {
@@ -219,12 +191,13 @@ public class MentionController {
             return;
         }
         ShopCategory category = functionCallService.pickup(text);
-        reply.append("「").append(session.getLocation()).append("」周辺の").append("「").append(category.getValue()).append("」").append("を調査します。\n");
-        var results = new ArrayList<>(Arrays.stream(googleMapsService.getShopInfo(session.getLocation(), category)).limit(5).toList());
+        reply.append("「").append(session.getLocation()).append("」周辺の").append("「").append(category.getValue()).append("」").append("を調査します。\n\n");
+        var results = new ArrayList<>(Arrays.stream(googleMapsService.getShopInfo(session.getLocation(), category)).limit(3).toList());
         session.setResults(results);
         reply.append(results.stream().map(place -> place.name).collect(Collectors.joining("\n")));
-        reply.append("\n");
-        reply.append("調査結果を採用するか、不要な物を削除してください。");
+        session.getResultsList().add(session.getResults());
+        session.setResults(null);
+        reply.append("他にも遊び場所を調査しますか？\n").append("調査しない場合は予定を確定してください。\n");
     }
 
     public void removeSpot(String id, StringBuilder reply, String messageText) {
@@ -287,7 +260,7 @@ public class MentionController {
         }
     }
 
-    public void draft(String id, StringBuilder reply) {
+    public void draft(String id, StringBuilder reply) throws IOException, InterruptedException, ApiException {
         if (!setupScheduleService.isEditting(id)) {
             reply.append("予定を立てていません。");
             return;
@@ -301,11 +274,14 @@ public class MentionController {
         reply.append("採用する案を決めてください。\n");
 
         setupScheduleService.draft(id);
-        for (int i = 0; i < session.getDrafts().size(); i++) {
-            reply.append("草案").append(i + 1).append(":\n");
-            reply.append(session.getDrafts().get(i).stream().map(Action::getName).collect(Collectors.joining("\n↓\n")));
-            reply.append("\n\n");
-        }
+//        for (int i = 0; i < session.getDrafts().size(); i++) {
+//            reply.append("草案").append(i + 1).append(":\n");
+//            reply.append(session.getDrafts().get(i).stream().map(Action::getName).collect(Collectors.joining("\n↓\n")));
+//            reply.append("\n\n");
+//        }
+        reply.append(session.getDrafts().get(0).stream().map(Action::getName).collect(Collectors.joining("\n↓\n")));
+        setupScheduleService.decideDraft(session, session.getDrafts().get(0));
+        reply.append("遊び計画を確定しました。良い一日を！");
     }
 
     public void decideDraft(String id, StringBuilder reply, String messageText) throws IOException, InterruptedException, ApiException {
@@ -328,7 +304,7 @@ public class MentionController {
             return;
         }
         setupScheduleService.decideDraft(session, session.getDrafts().get(command.getIndex() - 1));
-        reply.append("草案を確定しました。");
+        reply.append("遊び計画を確定しました。良い一日を！");
     }
 
     public void editAndAddSpotFromDecidedDraft(String id, StringBuilder reply, String messageText) throws IOException, InterruptedException, ApiException {
