@@ -20,6 +20,7 @@ public class AsobiPlanningSession {
     List<PlacesSearchResult> results;
     List<List<PlaceDetails>> resultsList = new ArrayList<>();
     List<List<Action>> drafts;
+    String name;
 
     public boolean isEditting() {
         return SetupScheduleService.sessions.values().stream().anyMatch(session -> session.getId().equals(id));

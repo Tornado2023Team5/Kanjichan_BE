@@ -3,7 +3,6 @@ package com.github.tornado2023team5.kanjichan.service;
 import com.github.tornado2023team5.kanjichan.entity.Action;
 import com.github.tornado2023team5.kanjichan.model.Address;
 import com.github.tornado2023team5.kanjichan.model.function.ShopCategory;
-import com.github.tornado2023team5.kanjichan.model.function.ShopInfo;
 import com.google.maps.GeoApiContext;
 import com.google.maps.GeocodingApi;
 import com.google.maps.PlaceDetailsRequest;
@@ -11,14 +10,12 @@ import com.google.maps.PlacesApi;
 import com.google.maps.errors.ApiException;
 import com.google.maps.model.GeocodingResult;
 import com.google.maps.model.PlaceDetails;
-import com.google.maps.model.PlaceType;
 import com.google.maps.model.PlacesSearchResult;
 import kotlin.Pair;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.net.URL;
 import java.util.*;
 
 @Service

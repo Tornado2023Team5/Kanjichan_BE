@@ -1,6 +1,2 @@
-POST http://localhost:8080/debug
+GET https://moon-usa.jp/api/schedule/?userId=cllth8w1s0009r34smefsfn9z&start=2023-08-30T06:21:19&end=2023-09-13T06:21:19
 Content-Type: application/json
-
-{
-  "input": "焼肉屋に行きたい"
-}

@@ -2,6 +2,7 @@ package com.github.tornado2023team5.kanjichan.controller;
 
 import com.github.tornado2023team5.kanjichan.entity.Action;
 import com.github.tornado2023team5.kanjichan.model.AsobiPlanningSession;
+import com.github.tornado2023team5.kanjichan.model.GroupUserRegistry;
 import com.github.tornado2023team5.kanjichan.model.function.CommandInformationFormat;
 import com.github.tornado2023team5.kanjichan.model.function.ShopCategory;
 import com.github.tornado2023team5.kanjichan.model.function.command.*;
@@ -39,10 +40,14 @@ public class MentionController {
     private final GoogleMapsService googleMapsService;
 
     @EventMapping
-    public TextMessage formatInput(MessageEvent event) throws InterruptedException, IOException, ApiException, ParseException {
+    public TextMessage formatInput(MessageEvent event) throws InterruptedException, IOException, ApiException, ExecutionException {
         Source source = event.getSource();
         var message = event.getMessage();
-        if(!(message instanceof TextMessageContent textContent)) return null;
+        if (!(source instanceof GroupSource groupSource)) return null;
+
+        setupScheduleService.registerUser(new GroupUserRegistry(groupSource.getGroupId(), source.getUserId()));
+
+        if (!(message instanceof TextMessageContent textContent)) return null;
         var messageText = textContent.getText();
         StringBuilder reply = new StringBuilder();
 
@@ -52,15 +57,11 @@ public class MentionController {
         String contentText = Arrays.stream(lines).skip(1).collect(Collectors.joining("\n"));
         String[] args = Arrays.stream(lines[0].split(" ")).skip(1).toArray(String[]::new);
 
-
-        if (!(source instanceof GroupSource groupSource)) return null;
-
         String id = groupSource.getGroupId();
         CommandInformationFormat format = functionCallService.detect(messageText.replace("@Moon", ""), commandList(id));
         reply.append(format.getCommandType()).append("\n\n");
         switch (format.getCommandType()) {
             case NONE -> reply.append("入力内容を正しく認識できませんでした。");
-            case JOIN_PLAN -> joinPlan(id, reply, source.getUserId());
             case MAKE_PLAN -> {
                 var command = functionCallService.makePlan(messageText);
                 if (command == null) return new TextMessage(reply + "入力内容を正しく認識できませんでした。");
@@ -88,7 +89,7 @@ public class MentionController {
         complete.append("あなたは旅行者の旅行計画を補助するBOTです。\n");
         complete.append("ユーザーの入力がコマンドのどれに当てはまるか分類してください。\n");
         complete.append("下記のコマンドの候補にないものは現在ユーザーが入力することはできません。\n");
-        if(!setupScheduleService.isEditting(id)) {
+        if (!setupScheduleService.isEditting(id)) {
             complete.append("MAKE_PLAN: 旅行計画を作成します。\n");
             complete.append("NONE: どのコマンドにも当てはまらない場合です。\n");
             return complete.toString();
@@ -96,11 +97,11 @@ public class MentionController {
         var session = setupScheduleService.getSession(id);
 
         complete.append("SET_LOCATION: 計画の目的地、集合場所を設定します。\n");
-        complete.append("JOIN_PLAN: 旅行計画、遊び計画のメンバーに参加します。\n");
-        if(session.getLocation() != null) complete.append("SEARCH_SPOTS: 計画の観光スポット、遊び場を検索します。\n");
-        if(session.getResultsList().size() >= 1)complete.append("SHOW_ADOPTED_SPOTS: 採用した観光スポット、遊び場をすべて表示します。\n");
+        if (session.getLocation() != null) complete.append("SEARCH_SPOTS: 計画の観光スポット、遊び場を検索します。\n");
+        if (session.getResultsList().size() >= 1)
+            complete.append("SHOW_ADOPTED_SPOTS: 採用した観光スポット、遊び場をすべて表示します。\n");
 
-        if(session.getActions() != null)
+        if (session.getActions() != null)
             complete.append("CONFIRM_PLAN: 旅行計画を確定します。\n");
 
         complete.append("RESET_PLAN: 現在計画中の旅行計画をリセットします。\n");
@@ -109,31 +110,22 @@ public class MentionController {
         return complete.toString();
     }
 
-    public void joinPlan(String id, StringBuilder reply, String lineId) {
-        var session = setupScheduleService.getSession(id);
-        if (session == null) {
-            reply.append("まずは予定を立てるウサ！🥕\n");
-            return;
-        }
-        setupScheduleService.addUser(id, lineId);
-        reply.append("予定の参加者として登録したウサ！🥕\n");
-    }
-
-    public void makePlan(String id, StringBuilder reply, MakePlanCommand command, String lineId) throws IOException, InterruptedException, ApiException {
+    public void makePlan(String id, StringBuilder reply, MakePlanCommand command, String lineId) throws IOException, InterruptedException, ApiException, ExecutionException {
         if (setupScheduleService.isEditting(id)) {
             reply.append("既に予定を立てているウサ！🥕　確定するウサ！🥕\n");
             return;
         }
-        setupScheduleService.start(id, lineId);
+        setupScheduleService.start(id, lineId, lineMessagingClient.getGroupSummary(id).get().getGroupName());
         reply.append("予定を立てる準備をしたウサ！🥕\n");
 
-        if(command.getDestination() != null) setDestination(id, reply, command.getDestination());
+        if (command.getDestination() != null) setDestination(id, reply, command.getDestination());
         else {
             reply.append("集合場所を教えるウサ！🥕\n");
             return;
         }
 
-        if(command.getCategory() != null) searchSpots(id, reply, command.getCategory(), setupScheduleService.getSession(id).getLocation());
+        if (command.getCategory() != null)
+            searchSpots(id, reply, command.getCategory(), setupScheduleService.getSession(id).getLocation());
         else reply.append("何をして遊ぶかを教えるウサ！🥕\n");
     }
 
@@ -160,6 +152,7 @@ public class MentionController {
         setupScheduleService.draft(id);
         reply.append(session.getDrafts().get(0).stream().map(Action::getName).collect(Collectors.joining("\n↓\n")));
         setupScheduleService.decideDraft(session, session.getDrafts().get(0));
+        session.setUsers(setupScheduleService.getUsers(id).getUserIds());
         LocalDateTime date = setupScheduleService.confirm(id);
 
         reply.append("予定内容:\n");
@@ -197,7 +190,7 @@ public class MentionController {
             reply.append("何をしたいか教えてください。\n 例: \n @bot \n 焼肉食べたい！");
             return;
         }
-        if(location != null) setDestination(id, reply, location);
+        if (location != null) setDestination(id, reply, location);
         ShopCategory category = functionCallService.pickup(text);
 
         var results = googleMapsService.getShopInfo(session.getLocation(), category);
@@ -227,7 +220,7 @@ public class MentionController {
         }
         session.getResults().removeIf(place -> command.getSpots().contains(place.name));
         reply.append(String.join(",", command.getSpots())).append("を削除しました。\n");
-        if(session.getResults().isEmpty()) {
+        if (session.getResults().isEmpty()) {
             reply.append("調査結果をすべて削除しました。\n");
             session.setResults(null);
         } else {
@@ -262,8 +255,8 @@ public class MentionController {
             return;
         }
         reply.append("今はここで遊ぶ予定を立てているウサ！🥕");
-        for(var results : session.getResultsList()) {
-            for(var result : results) {
+        for (var results : session.getResultsList()) {
+            for (var result : results) {
                 reply.append(result.name).append("\n");
             }
             reply.append("\n");
@@ -378,7 +371,7 @@ public class MentionController {
 
 
         reply.append(String.join(",", command.getSpots())).append("を削除しました。\n");
-        if(session.getResults().isEmpty()) {
+        if (session.getResults().isEmpty()) {
             reply.append("草案を破棄しました。\n");
             session.setActions(null);
         } else {

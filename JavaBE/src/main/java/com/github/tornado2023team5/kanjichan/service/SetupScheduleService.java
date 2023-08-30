@@ -1,22 +1,20 @@
 package com.github.tornado2023team5.kanjichan.service;
 
-import com.github.tornado2023team5.kanjichan.entity.*;
+import com.github.tornado2023team5.kanjichan.entity.Action;
+import com.github.tornado2023team5.kanjichan.entity.Asobi;
+import com.github.tornado2023team5.kanjichan.entity.Schedule;
 import com.github.tornado2023team5.kanjichan.model.AsobiPlanningSession;
-import com.github.tornado2023team5.kanjichan.model.function.ShopCategory;
+import com.github.tornado2023team5.kanjichan.model.GroupLineUserObject;
+import com.github.tornado2023team5.kanjichan.model.GroupUserObject;
+import com.github.tornado2023team5.kanjichan.model.GroupUserRegistry;
 import com.github.tornado2023team5.kanjichan.util.RestfulAPIUtil;
 import com.google.maps.errors.ApiException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -31,12 +29,14 @@ public class SetupScheduleService {
     private final static Random random = new Random();
     public static final HashMap<String, AsobiPlanningSession> sessions = new HashMap<>();
     private final GoogleMapsService googleMapsService;
+    private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
 
-    public void start(String id, String lineId) {
+    public void start(String id, String lineId, String name) {
         var session = new AsobiPlanningSession();
         Asobi asobi = restTemplate.getForObject(BASE_URL + "/api/asobi/start", Asobi.class);
         session.setId(asobi.getId());
         session.setUsers(new ArrayList<>());
+        session.setName(name);
         sessions.put(id, session);
         addUser(id, lineId);
     }
@@ -50,28 +50,34 @@ public class SetupScheduleService {
         sessions.get(id).getUsers().add(user);
     }
 
+    public void registerUser(GroupUserRegistry registry) {
+        restTemplate.postForObject(BASE_URL + "/api/line/group", registry, Void.class);
+    }
+
+    public GroupUserObject getUsers(String groupId) {
+        return restTemplate.getForObject(BASE_URL + "/api/line/group/user/" + groupId, GroupUserObject.class);
+    }
+
+    public GroupLineUserObject getLineUsers(String groupId) {
+        return restTemplate.getForObject(BASE_URL + "/api/line/group/line/" + groupId, GroupLineUserObject.class);
+    }
+
+
     public LocalDateTime confirm(String id) {
-        var session = sessions.get(id);
-        var asobi = new Asobi();
-        asobi.setId(session.getId());
-        asobi.setActions(session.getActions());
-        asobi.setParticipantIds(session.getUsers());
+        var asobi = new Asobi(getSession(id));
+
         var actions = asobi.getActions();
+        List<LocalDateTime> freeTimes = findCommonFreeTimes(asobi.getParticipantIds(), LocalDateTime.now());
+        if (freeTimes.size() == 0) return null;
 
-
-        List<LocalDateTime> freeTimes = findCommonFreeTimes(session.getUsers(), LocalDateTime.now());
-        if(freeTimes.size() == 0) return null;
-
-        var formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
         var date = freeTimes.get(0);
-
 
         for (int i = 0; i < actions.size(); i++) {
             Action action = actions.get(i);
             action.setStart(date.plusHours(3L * i).format(formatter));
             action.setEnd(date.plusHours(3L * i + 3).format(formatter));
         }
-        restTemplate.postForObject(BASE_URL + "/api/asobi",asobi, Asobi.class);
+        restTemplate.postForObject(BASE_URL + "/api/asobi", asobi, Asobi.class);
         sessions.remove(id);
         return date;
     }
@@ -121,8 +127,7 @@ public class SetupScheduleService {
         LocalDateTime endDate = baseDate.plusDays(14);
 
         for (String userId : userIds) {
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd-hh:mm:ss");
-            Schedule[] schedules = restTemplate.getForObject(BASE_URL + "/api/schedule/?lineUserId={userId}&start={startDate}&end={endDate}", Schedule[].class, userId, baseDate.format(formatter), endDate.format(formatter));
+            Schedule[] schedules = restTemplate.getForObject(BASE_URL + "/api/schedule?userId={userId}&start={startDate}&end={endDate}", Schedule[].class, userId, baseDate.format(formatter), endDate.format(formatter));
             userSchedulesMap.put(userId, List.of(schedules));
         }
 
