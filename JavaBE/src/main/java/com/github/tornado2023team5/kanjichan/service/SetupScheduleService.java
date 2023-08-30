@@ -68,7 +68,6 @@ public class SetupScheduleService {
 
         var actions = asobi.getActions();
         List<LocalDateTime> freeTimes = findCommonFreeTimes(asobi.getParticipantIds(), LocalDateTime.now());
-        freeTimes.forEach(System.out::println);
         if (freeTimes.size() == 0) return null;
 
         var date = freeTimes.get(0);
@@ -137,13 +136,12 @@ public class SetupScheduleService {
                 .collect(Collectors.groupingBy(Schedule::getDate, Collectors.toList()))
                 .entrySet().stream()
                 .flatMap(entry -> extractFreeSlots(entry.getKey(), entry.getValue()).stream())
-                .collect(Collectors.toList());
+                .sorted()
+                .toList();
     }
 
     private List<LocalDateTime> extractFreeSlots(LocalDateTime date, List<Schedule> schedules) {
         List<LocalDateTime> freeSlots = new ArrayList<>();
-
-        System.out.println(date + " morning: " + schedules.stream().allMatch(Schedule::getMorning) + " afternoon: " + schedules.stream().allMatch(Schedule::getAfternoon));
 
         if (schedules.stream().allMatch(Schedule::getMorning))
             freeSlots.add(date.withHour(9));
