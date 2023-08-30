@@ -143,22 +143,14 @@ public class SetupScheduleService {
     private List<LocalDateTime> extractFreeSlots(LocalDateTime date, List<Schedule> schedules) {
         List<LocalDateTime> freeSlots = new ArrayList<>();
 
-        if (isFreeMorningForAll(schedules)) {
-            freeSlots.add(date.withHour(9).withMinute(0));
-        }
+        System.out.println(date + " morning: " + schedules.stream().allMatch(Schedule::getMorning) + " afternoon: " + schedules.stream().allMatch(Schedule::getAfternoon));
 
-        if (isFreeAfternoonForAll(schedules)) {
-            freeSlots.add(date.withHour(13).withMinute(0));
-        }
+        if (schedules.stream().allMatch(Schedule::getMorning))
+            freeSlots.add(date.withHour(9));
+
+        if (schedules.stream().allMatch(Schedule::getAfternoon))
+            freeSlots.add(date.withHour(13));
 
         return freeSlots;
-    }
-
-    private boolean isFreeMorningForAll(List<Schedule> schedules) {
-        return schedules.stream().allMatch(Schedule::getMorning);
-    }
-
-    private boolean isFreeAfternoonForAll(List<Schedule> schedules) {
-        return schedules.stream().allMatch(Schedule::getAfternoon);
     }
 }
