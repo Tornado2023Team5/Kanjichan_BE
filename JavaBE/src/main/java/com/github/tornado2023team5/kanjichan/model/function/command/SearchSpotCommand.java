@@ -14,4 +14,6 @@ public class SearchSpotCommand {
     @JsonPropertyDescription("目的物のカテゴリー。焼肉、カフェ、水族館、マックなど")
     @JsonProperty(required = true)
     private String category;
+    @JsonPropertyDescription("集合場所。渋谷、新宿、池袋、秋葉原など")
+    private String destination;
 }

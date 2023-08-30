@@ -2,12 +2,10 @@ package com.github.tornado2023team5.kanjichan.model.function;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
-import lombok.Data;
 import lombok.Value;
 
 @Value
-public class ShopInfoSource {
-    @JsonPropertyDescription("目的物のカテゴリー。焼肉、カフェ、水族館、温泉など")
-    @JsonProperty(required = true)
+public class ShopInfo {
     String value;
+    float rate;
 }

@@ -50,7 +50,7 @@ public class SetupScheduleService {
         sessions.get(id).getUsers().add(user);
     }
 
-    public void confirm(String id) {
+    public LocalDateTime confirm(String id) {
         var session = sessions.get(id);
         var asobi = new Asobi();
         asobi.setId(session.getId());
@@ -59,8 +59,8 @@ public class SetupScheduleService {
         var actions = asobi.getActions();
 
 
-        List<LocalDateTime> freeTimes = findCommonFreeTimes(session.getUsers(), new Date());
-        if(freeTimes.size() == 0) return;
+        List<LocalDateTime> freeTimes = findCommonFreeTimes(session.getUsers(), LocalDateTime.now());
+        if(freeTimes.size() == 0) return null;
 
         var formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
         var date = freeTimes.get(0);
@@ -73,6 +73,7 @@ public class SetupScheduleService {
         }
         restTemplate.postForObject(BASE_URL + "/api/asobi",asobi, Asobi.class);
         sessions.remove(id);
+        return date;
     }
 
     public boolean isEditting(String id) {
@@ -112,16 +113,16 @@ public class SetupScheduleService {
         session.setDrafts(null);
     }
 
-    public List<LocalDateTime> findCommonFreeTimes(List<String> userIds, Date baseDate) {
+    public List<LocalDateTime> findCommonFreeTimes(List<String> userIds, LocalDateTime baseDate) {
         RestTemplate restTemplate = new RestTemplate();
         Map<String, List<Schedule>> userSchedulesMap = new HashMap<>();
 
         // Calculate end date (baseDate + 14 days)
-        LocalDateTime endDateTime = baseDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime().plusDays(14);
-        Date endDate = Date.from(endDateTime.atZone(ZoneId.systemDefault()).toInstant());
+        LocalDateTime endDate = baseDate.plusDays(14);
 
         for (String userId : userIds) {
-            Schedule[] schedules = restTemplate.getForObject("http://localhost:4000/api/schedule/?lineUserId={userId}&start={startDate}&end={endDate}", Schedule[].class, userId, baseDate, endDate);
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd-hh:mm:ss");
+            Schedule[] schedules = restTemplate.getForObject(BASE_URL + "/api/schedule/?lineUserId={userId}&start={startDate}&end={endDate}", Schedule[].class, userId, baseDate.format(formatter), endDate.format(formatter));
             userSchedulesMap.put(userId, List.of(schedules));
         }
 

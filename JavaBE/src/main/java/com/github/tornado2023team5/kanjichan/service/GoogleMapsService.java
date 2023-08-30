@@ -3,12 +3,14 @@ package com.github.tornado2023team5.kanjichan.service;
 import com.github.tornado2023team5.kanjichan.entity.Action;
 import com.github.tornado2023team5.kanjichan.model.Address;
 import com.github.tornado2023team5.kanjichan.model.function.ShopCategory;
+import com.github.tornado2023team5.kanjichan.model.function.ShopInfo;
 import com.google.maps.GeoApiContext;
 import com.google.maps.GeocodingApi;
 import com.google.maps.PlaceDetailsRequest;
 import com.google.maps.PlacesApi;
 import com.google.maps.errors.ApiException;
 import com.google.maps.model.GeocodingResult;
+import com.google.maps.model.PlaceDetails;
 import com.google.maps.model.PlaceType;
 import com.google.maps.model.PlacesSearchResult;
 import kotlin.Pair;
@@ -24,25 +26,53 @@ import java.util.*;
 public class GoogleMapsService {
     private final GeoApiContext context;
 
-    public PlacesSearchResult[] getShopInfo(String location, ShopCategory category) throws IOException, InterruptedException, ApiException {
-        var response = PlacesApi.textSearchQuery(context, location + " " + category.getValue()).await();
+    private PlacesSearchResult[] getShopResult(String location, ShopCategory category) throws IOException, InterruptedException, ApiException {
+        var response = PlacesApi.textSearchQuery(context, location + " " + category.getValue()).language("ja").await();
         return response.results;
     }
 
-    public HashMap<String, URL> getWebSites(PlacesSearchResult[] results) throws IOException, InterruptedException, ApiException {
+    public PlacesSearchResult getStation(String location) throws IOException, InterruptedException, ApiException {
+        var response = PlacesApi.textSearchQuery(context, location + " 最寄り駅").language("ja").await();
+        return response.results[0];
+    }
+
+    private HashMap<PlacesSearchResult, PlaceDetails> getPlaceDetails(PlacesSearchResult[] results) throws IOException, InterruptedException, ApiException {
         return new HashMap<>() {{
             for (var result : results) {
-                var request = PlacesApi.placeDetails(context, result.placeId);
+                var request = PlacesApi.placeDetails(context, result.placeId).language("ja");
                 request.fields(Arrays.stream(PlaceDetailsRequest.FieldMask.values())
                                        .filter(x -> x != PlaceDetailsRequest.FieldMask.SECONDARY_OPENING_HOURS)
                                        .toArray(PlaceDetailsRequest.FieldMask[]::new));
-                put(result.name, request.await().website);
+                put(result, request.await());
             }
         }};
     }
 
+    public List<PlaceDetails> getShopInfo(String location, ShopCategory category) throws IOException, InterruptedException, ApiException {
+        var results = getShopResult(location, category);
+        var details = getPlaceDetails(Arrays.stream(results).limit(5).toArray(PlacesSearchResult[]::new));
+        return details.entrySet().stream()
+                .filter(entry -> entry.getValue().rating >= 3.0)
+                .limit(3)
+                .map(Map.Entry::getValue)
+                .toList();
+    }
+
+    public static String getRatingStars(double rating) {
+        int numStars = (int) Math.round(rating);
+        StringBuilder stars = new StringBuilder();
+        for (int i = 1; i <= 5; i++) {
+            if (i <= numStars) {
+                stars.append("★"); // 星（★）を追加
+            } else {
+                stars.append("☆"); // 星じゃない（☆）を追加
+            }
+        }
+        return stars.toString();
+    }
+
     public Address getAddressDetails(String addressString)  {
-        GeocodingResult[] results = new GeocodingResult[0];
+        GeocodingResult[] results;
         try {
             results = GeocodingApi.geocode(context, addressString).await();
         } catch (ApiException | InterruptedException | IOException e) {

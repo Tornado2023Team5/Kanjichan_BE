@@ -4,6 +4,7 @@ import com.github.tornado2023team5.kanjichan.entity.Action;
 import com.github.tornado2023team5.kanjichan.entity.Asobi;
 import com.github.tornado2023team5.kanjichan.entity.User;
 import com.github.tornado2023team5.kanjichan.service.SetupScheduleService;
+import com.google.maps.model.PlaceDetails;
 import com.google.maps.model.PlacesSearchResult;
 import lombok.Data;
 
@@ -17,7 +18,7 @@ public class AsobiPlanningSession {
     String location;
     List<String> users;
     List<PlacesSearchResult> results;
-    List<List<PlacesSearchResult>> resultsList = new ArrayList<>();
+    List<List<PlaceDetails>> resultsList = new ArrayList<>();
     List<List<Action>> drafts;
 
     public boolean isEditting() {
