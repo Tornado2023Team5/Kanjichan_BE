@@ -14,6 +14,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -58,8 +61,12 @@ public class SetupScheduleService {
         return restTemplate.getForObject(BASE_URL + "/api/line/group/user/" + groupId, GroupUserObject.class);
     }
 
-    public GroupLineUserObject getLineUsers(String groupId) {
+    public GroupLineUserObject getGoogleCalendarUsers(String groupId) {
         return restTemplate.getForObject(BASE_URL + "/api/line/group/line/" + groupId, GroupLineUserObject.class);
+    }
+
+    public void addGoogleCalendarUser(String groupId, String lineId) {
+        restTemplate.postForObject(BASE_URL + "/api/line/group/line/" + groupId + "/" + lineId, null, Void.class);
     }
 
 
@@ -75,7 +82,10 @@ public class SetupScheduleService {
         for (int i = 0; i < actions.size(); i++) {
             Action action = actions.get(i);
             action.setStart(date.plusHours(3L * i).format(formatter));
-            action.setEnd(date.plusHours(3L * i + 3).format(formatter));
+            if(i == 0)
+                action.setEnd(date.format(formatter));
+            else
+                action.setEnd(date.plusHours(3L * i + 3).format(formatter));
         }
         restTemplate.postForObject(BASE_URL + "/api/asobi", asobi, Asobi.class);
         sessions.remove(id);
@@ -114,7 +124,7 @@ public class SetupScheduleService {
     }
 
     public void decideDraft(AsobiPlanningSession session, List<Action> draft) throws IOException, InterruptedException, ApiException {
-        googleMapsService.sortByDistance(draft, session.getLocation() + "駅");
+        draft = googleMapsService.sortByDistance(draft, session.getLocation() + "駅");
         session.setActions(draft);
         session.setDrafts(null);
     }
@@ -150,5 +160,29 @@ public class SetupScheduleService {
             freeSlots.add(date.withHour(13));
 
         return freeSlots;
+    }
+
+    public static String createEventUrl(String eventName, String details, String location, LocalDateTime start, LocalDateTime end) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'");
+
+        // Convert LocalDateTime to the required format
+        String formattedStart = start.format(formatter);
+        String formattedEnd = end.format(formatter);
+
+        // Construct the URL
+        String url = "https://www.google.com/calendar/render?action=TEMPLATE";
+
+        url += "&text=" + URLEncoder.encode(eventName, StandardCharsets.UTF_8);
+        url += "&dates=" + formattedStart + "/" + formattedEnd;
+        url += "&details=" + URLEncoder.encode(details, StandardCharsets.UTF_8);
+        url += "&location=" + URLEncoder.encode(location, StandardCharsets.UTF_8);
+
+        return url;
+    }
+
+    public static void main(String[] args) {
+        LocalDateTime start = LocalDateTime.of(2023, 9, 1, 10, 0);
+        LocalDateTime end = LocalDateTime.of(2023, 9, 1, 11, 0);
+        System.out.println(createEventUrl("Meeting", "Discuss project", "Office", start, end));
     }
 }

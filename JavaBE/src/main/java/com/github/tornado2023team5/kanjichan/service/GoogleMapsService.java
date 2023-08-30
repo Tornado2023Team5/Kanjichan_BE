@@ -68,7 +68,7 @@ public class GoogleMapsService {
         return stars.toString();
     }
 
-    public Address getAddressDetails(String addressString)  {
+    public Address getAddressDetails(String addressString) {
         GeocodingResult[] results;
         try {
             results = GeocodingApi.geocode(context, addressString).await();
@@ -112,7 +112,7 @@ public class GoogleMapsService {
     public List<Action> sortByDistance(List<Action> draft, String start) throws IOException, InterruptedException, ApiException {
         var response = PlacesApi.textSearchQuery(context, start).await();
         var station = Arrays.stream(response.results).findFirst();
-        if(station.isEmpty()) return new ArrayList<>();
+        if (station.isEmpty()) return new ArrayList<>();
         var stationAction = new Action();
         stationAction.setLocation(station.get().formattedAddress);
         stationAction.setName(station.get().name);
@@ -128,9 +128,7 @@ public class GoogleMapsService {
         }};
         var result = DFS(passed, rem, 0, distances);
         return new ArrayList<>() {{
-            for (int i : result.getSecond()) {
-                add(draft.get(i));
-            }
+            for (int i : result.getSecond()) add(draft.get(i));
         }};
     }
 

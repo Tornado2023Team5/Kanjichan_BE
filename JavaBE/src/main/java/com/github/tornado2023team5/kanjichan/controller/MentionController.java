@@ -157,7 +157,7 @@ public class MentionController {
 
         reply.append("予定内容:\n");
         reply.append("◦ 日程: ").append(date).append("\n");
-        reply.append("◦ 場所: ").append(googleMapsService.getStation(session.getLocation()).name).append(date.getHour()).append("時").append("\n\n");
+        reply.append("◦ 場所: ").append(googleMapsService.getStation(session.getLocation()).name).append("\n\n");
         reply.append("素晴らしい一日にしましょう🥕");
     }
 
