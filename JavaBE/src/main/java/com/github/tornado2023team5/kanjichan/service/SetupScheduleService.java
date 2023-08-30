@@ -9,6 +9,9 @@ import com.github.tornado2023team5.kanjichan.model.GroupUserObject;
 import com.github.tornado2023team5.kanjichan.model.GroupUserRegistry;
 import com.github.tornado2023team5.kanjichan.util.RestfulAPIUtil;
 import com.google.maps.errors.ApiException;
+import com.linecorp.bot.client.LineMessagingClient;
+import com.linecorp.bot.model.PushMessage;
+import com.linecorp.bot.model.message.TextMessage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -32,6 +35,7 @@ public class SetupScheduleService {
     private final static Random random = new Random();
     public static final HashMap<String, AsobiPlanningSession> sessions = new HashMap<>();
     private final GoogleMapsService googleMapsService;
+    private final LineMessagingClient lineMessagingClient;
     private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
 
     public void start(String id, String lineId, String name) {
@@ -61,12 +65,8 @@ public class SetupScheduleService {
         return restTemplate.getForObject(BASE_URL + "/api/line/group/user/" + groupId, GroupUserObject.class);
     }
 
-    public GroupLineUserObject getGoogleCalendarUsers(String groupId) {
-        return restTemplate.getForObject(BASE_URL + "/api/line/group/line/" + groupId, GroupLineUserObject.class);
-    }
-
-    public void addGoogleCalendarUser(String groupId, String lineId) {
-        restTemplate.postForObject(BASE_URL + "/api/line/group/line/" + groupId + "/" + lineId, null, Void.class);
+    public List<String> getGoogleCalendarUsers(String groupId) {
+        return Arrays.asList(restTemplate.getForObject(BASE_URL + "/api/line/group/google/" + groupId, String[].class));
     }
 
 
@@ -88,6 +88,12 @@ public class SetupScheduleService {
                 action.setEnd(date.plusHours(3L * i + 3).format(formatter));
         }
         restTemplate.postForObject(BASE_URL + "/api/asobi", asobi, Asobi.class);
+        var googleUsers = getGoogleCalendarUsers(id);
+        var message = createEventUrl(asobi.getName(), asobi.getDescription(), actions.get(0).getLocation(), actions.get(0).getStart(), actions.get(actions.size() - 1).getEnd());
+        googleUsers.forEach(userId -> {
+            var textMessage = new TextMessage(message);
+            var pushMessage = new PushMessage(userId, textMessage);
+        });
         sessions.remove(id);
         return date;
     }
@@ -174,6 +180,19 @@ public class SetupScheduleService {
 
         url += "&text=" + URLEncoder.encode(eventName, StandardCharsets.UTF_8);
         url += "&dates=" + formattedStart + "/" + formattedEnd;
+        url += "&details=" + URLEncoder.encode(details, StandardCharsets.UTF_8);
+        url += "&location=" + URLEncoder.encode(location, StandardCharsets.UTF_8);
+
+        return url;
+    }
+
+    public static String createEventUrl(String eventName, String details, String location, String start, String end) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'");
+        // Construct the URL
+        String url = "https://www.google.com/calendar/render?action=TEMPLATE";
+
+        url += "&text=" + URLEncoder.encode(eventName, StandardCharsets.UTF_8);
+        url += "&dates=" + start + "/" + end;
         url += "&details=" + URLEncoder.encode(details, StandardCharsets.UTF_8);
         url += "&location=" + URLEncoder.encode(location, StandardCharsets.UTF_8);
 
