@@ -175,7 +175,7 @@ public class MentionController {
 
         lineUsers.getLineUserIds().forEach(userId -> {
             var textMessage = new TextMessage(directMessage.toString());
-            var addCalendarMessage = new TextMessage("リンクからカレンダーに追加して忘れないよにするウサ\uD83D\uDCC5" + "\n" + addCalendarText);
+            var addCalendarMessage = new TextMessage("Googleカレンダーに追加するリンクウサ！忘れないよにするウサ\uD83D\uDCC5" + "\n" + addCalendarText);
             var pushMessage = googleUsers.contains(userId) ? new PushMessage(userId, Arrays.asList(textMessage, addCalendarMessage)) : new PushMessage(userId, textMessage);
             lineMessagingClient.pushMessage(pushMessage);
         });
