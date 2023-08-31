@@ -86,6 +86,7 @@ public class SetupScheduleService {
                 action.setEnd(date.format(formatter));
             else
                 action.setEnd(date.plusHours(3L * i + 3).format(formatter));
+            System.out.println(action);
         }
         restTemplate.postForObject(BASE_URL + "/api/asobi", asobi, Asobi.class);
         var googleUsers = getGoogleCalendarUsers(id);
@@ -93,6 +94,7 @@ public class SetupScheduleService {
         googleUsers.forEach(userId -> {
             var textMessage = new TextMessage(message);
             var pushMessage = new PushMessage(userId, textMessage);
+            lineMessagingClient.pushMessage(pushMessage);
         });
         sessions.remove(id);
         return date;
@@ -158,6 +160,8 @@ public class SetupScheduleService {
 
     private List<LocalDateTime> extractFreeSlots(LocalDateTime date, List<Schedule> schedules) {
         List<LocalDateTime> freeSlots = new ArrayList<>();
+
+        System.out.println("date: " + date + ", morning: " + schedules.stream().allMatch(Schedule::getMorning) + ", afternoon: " + schedules.stream().allMatch(Schedule::getAfternoon));
 
         if (schedules.stream().allMatch(Schedule::getMorning))
             freeSlots.add(date.withHour(9));

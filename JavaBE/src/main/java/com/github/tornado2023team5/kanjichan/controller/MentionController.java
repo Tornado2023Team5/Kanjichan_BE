@@ -24,6 +24,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.io.IOException;
 import java.text.ParseException;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -59,7 +61,6 @@ public class MentionController {
 
         String id = groupSource.getGroupId();
         CommandInformationFormat format = functionCallService.detect(messageText.replace("@Moon", ""), commandList(id));
-        reply.append(format.getCommandType()).append("\n\n");
         switch (format.getCommandType()) {
             case NONE -> reply.append("入力内容を正しく認識できませんでした。");
             case MAKE_PLAN -> {
@@ -72,7 +73,7 @@ public class MentionController {
             case SET_LOCATION -> {
                 var command = functionCallService.setLocation(messageText);
                 if (command == null) return new TextMessage(reply + "入力内容を正しく認識できませんでした。");
-                setDestination(id, reply, command.getDestination());
+                setDestination(id, reply, command.getDestination(), true);
             }
             case SEARCH_SPOTS -> {
                 var command = functionCallService.searchSpots(messageText);
@@ -118,7 +119,7 @@ public class MentionController {
         setupScheduleService.start(id, lineId, lineMessagingClient.getGroupSummary(id).get().getGroupName());
         reply.append("予定を立てる準備をしたウサ！🥕\n");
 
-        if (command.getDestination() != null) setDestination(id, reply, command.getDestination());
+        if (command.getDestination() != null) setDestination(id, reply, command.getDestination(), false);
         else {
             reply.append("集合場所を教えるウサ！🥕\n");
             return;
@@ -158,10 +159,10 @@ public class MentionController {
         reply.append("予定内容:\n");
         reply.append("◦ 日程: ").append(date).append("\n");
         reply.append("◦ 場所: ").append(googleMapsService.getStation(session.getLocation()).name).append("\n\n");
-        reply.append("素晴らしい一日にしましょう🥕");
+        reply.append("楽しんできてほしいウサ！\uD83D\uDC30✨");
     }
 
-    public void setDestination(String id, StringBuilder reply, String destination) {
+    public void setDestination(String id, StringBuilder reply, String destination, boolean sendReply) {
         var session = setupScheduleService.getSession(id);
         if (session == null) {
             reply.append("まずは予定を立てるウサ！🥕\n");
@@ -173,7 +174,7 @@ public class MentionController {
         }
         setupScheduleService.setLocation(id, destination);
 
-        reply.append("活動場所を「").append(destination).append("」に設定したウサ！🥕\n");
+       if(sendReply) reply.append("活動場所を「").append(destination).append("」に設定したウサ！🥕\n");
     }
 
     public void searchSpots(String id, StringBuilder reply, String text, String location) throws IOException, InterruptedException, ApiException {
@@ -190,7 +191,7 @@ public class MentionController {
             reply.append("何をしたいか教えてください。\n 例: \n @bot \n 焼肉食べたい！");
             return;
         }
-        if (location != null) setDestination(id, reply, location);
+        if (location != null) setDestination(id, reply, location, true);
         ShopCategory category = functionCallService.pickup(text);
 
         var results = googleMapsService.getShopInfo(session.getLocation(), category);

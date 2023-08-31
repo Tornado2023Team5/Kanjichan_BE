@@ -110,7 +110,7 @@ public class GoogleMapsService {
 
     // 最初の地点からその点まで戻る一筆書きの最適経路を求める
     public List<Action> sortByDistance(List<Action> draft, String start) throws IOException, InterruptedException, ApiException {
-        var response = PlacesApi.textSearchQuery(context, start).await();
+        var response = PlacesApi.textSearchQuery(context, start).language("ja").await();
         var station = Arrays.stream(response.results).findFirst();
         if (station.isEmpty()) return new ArrayList<>();
         var stationAction = new Action();
