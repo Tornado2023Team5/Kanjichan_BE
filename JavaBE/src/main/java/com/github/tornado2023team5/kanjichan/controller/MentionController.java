@@ -92,14 +92,14 @@ public class MentionController {
         complete.append("ユーザーの入力がコマンドのどれに当てはまるか分類してください。\n");
         complete.append("下記のコマンドの候補にないものは現在ユーザーが入力することはできません。\n");
         if (!setupScheduleService.isEditting(id)) {
-            complete.append("MAKE_PLAN: 旅行計画を作成します。\n");
+            complete.append("MAKE_PLAN: 旅行計画を作成します。「～予定を立ててください！」「～で遊びたい！」\n");
             complete.append("NONE: どのコマンドにも当てはまらない場合です。\n");
             return complete.toString();
         }
         var session = setupScheduleService.getSession(id);
 
-        complete.append("SET_LOCATION: 計画の目的地、集合場所を設定します。「～予定を立ててください！」「～で遊びたい！」\n");
-        if (session.getLocation() != null) complete.append("SEARCH_SPOTS: 計画の観光スポット、遊び場を検索します。「～で遊びたい！\n");
+        complete.append("SET_LOCATION: 計画の目的地、集合場所を設定します。\n");
+        if (session.getLocation() != null) complete.append("SEARCH_SPOTS: 計画の観光スポット、遊び場を検索します。「～で遊びたい！」\n");
         if (session.getResultsList().size() >= 1)
             complete.append("SHOW_ADOPTED_SPOTS: 採用した観光スポット、遊び場をすべて表示します。\n");
 
@@ -163,14 +163,19 @@ public class MentionController {
         reply.append("楽しんできてほしいウサ！\uD83D\uDC30✨");
 
         var directMessage = new StringBuilder();
-        directMessage.append("新しい遊びの予定が追加されたウサ！\uD83C\uDF15\n");
+        directMessage.append("\uD83D\uDE80\uD83E\uDD55遊びの予定が決まったうさ\uD83E\uDD55\uD83D\uDE80\n");
         directMessage.append("◦ グループ: ").append(session.getName()).append("\n");
         directMessage.append("◦ 日程: ").append(date).append("\n");
         directMessage.append("◦ 場所: ").append(googleMapsService.getStation(session.getLocation()).name).append("\n\n");
         directMessage.append("楽しんできてほしいウサ！\uD83D\uDC30✨");
+
+        var googleUsers = setupScheduleService.getGoogleCalendarUsers(id);
+        var addCalendarText = setupScheduleService.createEventUrl(session.getName(), "", session.getActions().get(0).getLocation(), session.getActions().get(0).getStart(), session.getActions().get(session.getActions().size() - 1).getEnd());
+
         session.getUsers().forEach(userId -> {
-            var textMessage = new TextMessage(reply.toString());
-            var pushMessage = new PushMessage(userId, textMessage);
+            var textMessage = new TextMessage(directMessage.toString());
+            var addCalendarMessage = new TextMessage("リンクからカレンダーに追加して忘れないよにするウサ\uD83D\uDCC5" + "\n" + addCalendarText);
+            var pushMessage = googleUsers.contains(userId) ? new PushMessage(userId, Arrays.asList(textMessage, addCalendarMessage)) : new PushMessage(userId, textMessage);
             lineMessagingClient.pushMessage(pushMessage);
         });
     }
