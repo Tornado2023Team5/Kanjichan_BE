@@ -169,10 +169,11 @@ public class MentionController {
         directMessage.append("◦ 場所: ").append(googleMapsService.getStation(session.getLocation()).name).append("\n\n");
         directMessage.append("楽しんできてほしいウサ！\uD83D\uDC30✨");
 
+        var lineUsers = setupScheduleService.getLineUsers(id);
         var googleUsers = setupScheduleService.getGoogleCalendarUsers(id);
         var addCalendarText = setupScheduleService.createEventUrl(session.getName(), "", session.getActions().get(0).getLocation(), session.getActions().get(0).getStart(), session.getActions().get(session.getActions().size() - 1).getEnd());
 
-        session.getUsers().forEach(userId -> {
+        lineUsers.getLineUserIds().forEach(userId -> {
             var textMessage = new TextMessage(directMessage.toString());
             var addCalendarMessage = new TextMessage("リンクからカレンダーに追加して忘れないよにするウサ\uD83D\uDCC5" + "\n" + addCalendarText);
             var pushMessage = googleUsers.contains(userId) ? new PushMessage(userId, Arrays.asList(textMessage, addCalendarMessage)) : new PushMessage(userId, textMessage);

@@ -65,6 +65,10 @@ public class SetupScheduleService {
         return restTemplate.getForObject(BASE_URL + "/api/line/group/user/" + groupId, GroupUserObject.class);
     }
 
+    public GroupLineUserObject getLineUsers(String groupId) {
+        return restTemplate.getForObject(BASE_URL + "/api/line/group/line/" + groupId, GroupLineUserObject.class);
+    }
+
     public List<String> getGoogleCalendarUsers(String groupId) {
         return Arrays.asList(restTemplate.getForObject(BASE_URL + "/api/line/group/google/" + groupId, String[].class));
     }
