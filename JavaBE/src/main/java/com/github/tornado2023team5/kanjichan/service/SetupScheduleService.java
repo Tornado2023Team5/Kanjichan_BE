@@ -74,7 +74,7 @@ public class SetupScheduleService {
         var asobi = new Asobi(getSession(id));
 
         var actions = asobi.getActions();
-        List<LocalDateTime> freeTimes = findCommonFreeTimes(asobi.getParticipantIds(), LocalDateTime.now());
+        List<LocalDateTime> freeTimes = findCommonFreeTimes(asobi.getParticipantIds(), LocalDateTime.now().plusDays(1));
         if (freeTimes.size() == 0) return null;
 
         var date = freeTimes.get(0);

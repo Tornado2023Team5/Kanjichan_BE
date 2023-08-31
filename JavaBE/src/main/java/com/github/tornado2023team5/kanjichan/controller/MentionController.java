@@ -97,8 +97,8 @@ public class MentionController {
         }
         var session = setupScheduleService.getSession(id);
 
-        complete.append("SET_LOCATION: 計画の目的地、集合場所を設定します。\n");
-        if (session.getLocation() != null) complete.append("SEARCH_SPOTS: 計画の観光スポット、遊び場を検索します。\n");
+        complete.append("SET_LOCATION: 計画の目的地、集合場所を設定します。「～予定を立ててください！」「～で遊びたい！」\n");
+        if (session.getLocation() != null) complete.append("SEARCH_SPOTS: 計画の観光スポット、遊び場を検索します。「～で遊びたい！\n");
         if (session.getResultsList().size() >= 1)
             complete.append("SHOW_ADOPTED_SPOTS: 採用した観光スポット、遊び場をすべて表示します。\n");
 
