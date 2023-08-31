@@ -81,13 +81,13 @@ public class SetupScheduleService {
 
         for (int i = 1; i < actions.size() - 1; i++) {
             Action action = actions.get(i);
-            action.setStart(date.plusHours(3L * i).format(formatter));
-            action.setEnd(date.plusHours(3L * i + 3).format(formatter));
-            System.out.println(action);
+            var diff = (i - 1) * 3L;
+            action.setStart(date.plusHours(diff).format(formatter));
+            action.setEnd(date.plusHours(diff + 3L).format(formatter));
         }
         actions.get(0).setStart(date.format(formatter));
         actions.get(0).setEnd(date.format(formatter));
-        actions.get(actions.size() - 1).setStart(date.plusHours(3L * (actions.size() - 3 + 3)).format(formatter));
+        actions.get(actions.size() - 1).setStart(date.plusHours(3L * (actions.size() - 3)).format(formatter));
         actions.get(actions.size() - 1).setEnd(date.plusHours(3L * (actions.size() - 2)).format(formatter));
         restTemplate.postForObject(BASE_URL + "/api/asobi", asobi, Asobi.class);
         var googleUsers = getGoogleCalendarUsers(id);
