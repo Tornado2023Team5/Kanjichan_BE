@@ -87,8 +87,6 @@ public class SetupScheduleService {
         }
         actions.get(0).setStart(date.format(formatter));
         actions.get(0).setEnd(date.format(formatter));
-        actions.get(actions.size() - 1).setStart(date.plusHours(3L * (actions.size() - 2)).format(formatter));
-        actions.get(actions.size() - 1).setEnd(date.plusHours(3L * (actions.size() - 2)).format(formatter));
         restTemplate.postForObject(BASE_URL + "/api/asobi", asobi, Asobi.class);
         var googleUsers = getGoogleCalendarUsers(id);
         var message = createEventUrl(asobi.getName(), asobi.getDescription(), actions.get(0).getLocation(), actions.get(0).getStart(), actions.get(actions.size() - 1).getEnd());

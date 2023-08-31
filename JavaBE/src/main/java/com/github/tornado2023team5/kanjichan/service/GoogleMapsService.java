@@ -122,7 +122,7 @@ public class GoogleMapsService {
         double[][] distances = fullSearch(addresses);
 
         var passed = new ArrayDeque<Integer>();
-        passed.addLast(0);
+//        passed.addLast(0);
         var rem = new HashSet<Integer>() {{
             for (int i = 1; i < addresses.size(); i++) add(i);
         }};
