@@ -79,6 +79,8 @@ public class SetupScheduleService {
 
         var date = freeTimes.get(0);
 
+        actions.remove(actions.size() - 1);
+
         for (int i = 1; i < actions.size(); i++) {
             Action action = actions.get(i);
             var diff = (i - 1) * 3L;
