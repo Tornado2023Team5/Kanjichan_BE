@@ -79,7 +79,7 @@ public class SetupScheduleService {
 
         var date = freeTimes.get(0);
 
-        for (int i = 1; i < actions.size() - 1; i++) {
+        for (int i = 1; i < actions.size(); i++) {
             Action action = actions.get(i);
             var diff = (i - 1) * 3L;
             action.setStart(date.plusHours(diff).format(formatter));
@@ -160,8 +160,6 @@ public class SetupScheduleService {
     private List<LocalDateTime> extractFreeSlots(LocalDateTime date, List<Schedule> schedules) {
         List<LocalDateTime> freeSlots = new ArrayList<>();
 
-        System.out.println("date: " + date + ", morning: " + schedules.stream().allMatch(Schedule::getMorning) + ", afternoon: " + schedules.stream().allMatch(Schedule::getAfternoon));
-
         if (schedules.stream().allMatch(Schedule::getMorning))
             freeSlots.add(date.withHour(9));
 
@@ -200,11 +198,5 @@ public class SetupScheduleService {
         url += "&location=" + URLEncoder.encode(location, StandardCharsets.UTF_8);
 
         return url;
-    }
-
-    public static void main(String[] args) {
-        LocalDateTime start = LocalDateTime.of(2023, 9, 1, 10, 0);
-        LocalDateTime end = LocalDateTime.of(2023, 9, 1, 11, 0);
-        System.out.println(createEventUrl("Meeting", "Discuss project", "Office", start, end));
     }
 }
