@@ -9,6 +9,7 @@ import com.github.tornado2023team5.kanjichan.model.function.command.*;
 import com.github.tornado2023team5.kanjichan.service.*;
 import com.google.maps.errors.ApiException;
 import com.linecorp.bot.client.LineMessagingClient;
+import com.linecorp.bot.model.PushMessage;
 import com.linecorp.bot.model.ReplyMessage;
 import com.linecorp.bot.model.event.MessageEvent;
 import com.linecorp.bot.model.event.message.TextMessageContent;
@@ -160,6 +161,18 @@ public class MentionController {
         reply.append("◦ 日程: ").append(date).append("\n");
         reply.append("◦ 場所: ").append(googleMapsService.getStation(session.getLocation()).name).append("\n\n");
         reply.append("楽しんできてほしいウサ！\uD83D\uDC30✨");
+
+        var directMessage = new StringBuilder();
+        directMessage.append("新しい遊びの予定が追加されたウサ！\uD83C\uDF15\n");
+        directMessage.append("◦ グループ: ").append(session.getName()).append("\n");
+        directMessage.append("◦ 日程: ").append(date).append("\n");
+        directMessage.append("◦ 場所: ").append(googleMapsService.getStation(session.getLocation()).name).append("\n\n");
+        directMessage.append("楽しんできてほしいウサ！\uD83D\uDC30✨");
+        session.getUsers().forEach(userId -> {
+            var textMessage = new TextMessage(reply.toString());
+            var pushMessage = new PushMessage(userId, textMessage);
+            lineMessagingClient.pushMessage(pushMessage);
+        });
     }
 
     public void setDestination(String id, StringBuilder reply, String destination, boolean sendReply) {
@@ -169,12 +182,12 @@ public class MentionController {
             return;
         }
         if (destination == null) {
-            reply.append("集合場所場所を教えるウサ！🥕\n 例: \n @Moon \n 渋谷でカラオケしたい！");
+            reply.append("集合場所場所を教えるウサ！🥕\n 例: \n @Moon \n 渋谷でカラオケする予定を立てて！");
             return;
         }
         setupScheduleService.setLocation(id, destination);
 
-       if(sendReply) reply.append("活動場所を「").append(destination).append("」に設定したウサ！🥕\n");
+        if (sendReply) reply.append("活動場所を「").append(destination).append("」に設定したウサ！🥕\n");
     }
 
     public void searchSpots(String id, StringBuilder reply, String text, String location) throws IOException, InterruptedException, ApiException {
@@ -201,7 +214,7 @@ public class MentionController {
         reply.append(results.stream().map(place -> "◦ " + place.name + "\n" +
                 "レビュー: " + GoogleMapsService.getRatingStars(place.rating) + " " + place.rating + "\n" +
                 place.url).collect(Collectors.joining("\n\n")));
-        reply.append("\n\n").append("他にも遊び場所を追加するウサ？\uD83D\uDC30✨\n").append("予定を確定するなら確定！って言ってほしいウサ！！\uD83E\uDD55\n");
+        reply.append("\n\n").append("他にも遊び場所を追加するウサ？🌕\uD83D\uDC30✨\n").append("予定を確定するなら確定！って言ってほしいウサ！！\uD83E\uDD55\n");
     }
 
     public void removeSpot(String id, StringBuilder reply, String messageText) {
