@@ -1,11 +1,17 @@
 package com.github.tornado2023team5.kanjichan.controller;
 
 import com.linecorp.bot.client.LineMessagingClient;
+import com.linecorp.bot.model.ReplyMessage;
+import com.linecorp.bot.model.action.MessageAction;
 import com.linecorp.bot.model.event.JoinEvent;
+import com.linecorp.bot.model.message.Message;
 import com.linecorp.bot.model.message.TextMessage;
 import com.linecorp.bot.spring.boot.annotation.EventMapping;
 import com.linecorp.bot.spring.boot.annotation.LineMessageHandler;
 import lombok.RequiredArgsConstructor;
+
+import java.util.Arrays;
+import java.util.List;
 
 @LineMessageHandler
 @RequiredArgsConstructor
@@ -24,7 +30,7 @@ public class JoinController {
                                        からgoogleカレンダーと連携して自動で予定を反映することもできるウサよ！🌕
                                                                               
                                        使い方を知りたい時はメニューから「使い方」のボタンを押して欲しいウサ🐰
-                                       
+                                                                              
                                        🌕🥕Moonに挨拶しない人は予定に参加させてあげないウサよ！！🥕🌕
                                        """);
     }

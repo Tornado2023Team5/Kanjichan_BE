@@ -31,7 +31,7 @@ public class SetupScheduleService {
     private final RestfulAPIUtil restfulAPIUtil;
     private final RestTemplate restTemplate;
     //    private static final String BASE_URL = "http://db_server:4000";
-    private static final String BASE_URL = "https://moon-usa.jp";
+    private static final String BASE_URL = "https://localhost:4000/internal";
     private final static Random random = new Random();
     public static final HashMap<String, AsobiPlanningSession> sessions = new HashMap<>();
     private final GoogleMapsService googleMapsService;

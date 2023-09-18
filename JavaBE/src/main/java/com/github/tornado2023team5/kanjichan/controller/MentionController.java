@@ -92,7 +92,7 @@ public class MentionController {
         complete.append("ユーザーの入力がコマンドのどれに当てはまるか分類してください。\n");
         complete.append("下記のコマンドの候補にないものは現在ユーザーが入力することはできません。\n");
         if (!setupScheduleService.isEditting(id)) {
-            complete.append("MAKE_PLAN: 旅行計画を作成します。「～予定を立ててください！」「～で遊びたい！」\n");
+            complete.append("MAKE_PLAN: 旅行計画を作成します。「活動場所と遊び内容が含まれている」もしくは「予定を立てる旨の指示」の時選択してください「渋谷で焼肉」「～予定を立ててください！」「～で遊びたい！」\n");
             complete.append("NONE: どのコマンドにも当てはまらない場合です。\n");
             return complete.toString();
         }
