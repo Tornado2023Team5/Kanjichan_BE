@@ -37,7 +37,7 @@ public class SetupScheduleService {
 
     public void start(String id, String lineId, String name) {
         var session = new AsobiPlanningSession();
-        Asobi asobi = restTemplate.getForObject(BASE_URL + "/api/asobi/start", Asobi.class);
+        Asobi asobi = restTemplate.getForObject(BASE_URL + "/asobi/start", Asobi.class);
         session.setId(asobi.getId());
         session.setUsers(new ArrayList<>());
         session.setName(name);
@@ -50,24 +50,24 @@ public class SetupScheduleService {
     }
 
     public void addUser(String id, String lineId) {
-        var user = restTemplate.getForObject(BASE_URL + "/api/lineId/" + lineId, String.class);
+        var user = restTemplate.getForObject(BASE_URL + "/lineId/" + lineId, String.class);
         sessions.get(id).getUsers().add(user);
     }
 
     public void registerUser(GroupUserRegistry registry) {
-        restTemplate.postForObject(BASE_URL + "/api/line/group", registry, Void.class);
+        restTemplate.postForObject(BASE_URL + "/line/group", registry, Void.class);
     }
 
     public GroupUserObject getUsers(String groupId) {
-        return restTemplate.getForObject(BASE_URL + "/api/line/group/user/" + groupId, GroupUserObject.class);
+        return restTemplate.getForObject(BASE_URL + "/line/group/user/" + groupId, GroupUserObject.class);
     }
 
     public GroupLineUserObject getLineUsers(String groupId) {
-        return restTemplate.getForObject(BASE_URL + "/api/line/group/line/" + groupId, GroupLineUserObject.class);
+        return restTemplate.getForObject(BASE_URL + "/line/group/line/" + groupId, GroupLineUserObject.class);
     }
 
     public List<String> getGoogleCalendarUsers(String groupId) {
-        return Arrays.asList(restTemplate.getForObject(BASE_URL + "/api/line/group/google/" + groupId, String[].class));
+        return Arrays.asList(restTemplate.getForObject(BASE_URL + "/line/group/google/" + groupId, String[].class));
     }
 
 
@@ -90,7 +90,7 @@ public class SetupScheduleService {
         }
         actions.get(0).setStart(date.format(formatter));
         actions.get(0).setEnd(date.format(formatter));
-        restTemplate.postForObject(BASE_URL + "/api/asobi", asobi, Asobi.class);
+        restTemplate.postForObject(BASE_URL + "/asobi", asobi, Asobi.class);
         sessions.remove(id);
         return date;
     }
@@ -140,7 +140,7 @@ public class SetupScheduleService {
         LocalDateTime endDate = baseDate.plusDays(14);
 
         for (String userId : userIds) {
-            Schedule[] schedules = restTemplate.getForObject(BASE_URL + "/api/schedule?userId={userId}&start={startDate}&end={endDate}", Schedule[].class, userId, baseDate.format(formatter), endDate.format(formatter));
+            Schedule[] schedules = restTemplate.getForObject(BASE_URL + "/schedule?userId={userId}&start={startDate}&end={endDate}", Schedule[].class, userId, baseDate.format(formatter), endDate.format(formatter));
             userSchedulesMap.put(userId, List.of(schedules));
         }
 
