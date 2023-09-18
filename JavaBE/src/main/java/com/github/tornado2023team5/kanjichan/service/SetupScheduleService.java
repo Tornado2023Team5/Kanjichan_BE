@@ -28,14 +28,11 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class SetupScheduleService {
-    private final RestfulAPIUtil restfulAPIUtil;
     private final RestTemplate restTemplate;
-    //    private static final String BASE_URL = "http://db_server:4000";
-    private static final String BASE_URL = "https://localhost:4000/internal";
+    private static final String BASE_URL = "http://db_server:4000/internal";
     private final static Random random = new Random();
     public static final HashMap<String, AsobiPlanningSession> sessions = new HashMap<>();
     private final GoogleMapsService googleMapsService;
-    private final LineMessagingClient lineMessagingClient;
     private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
 
     public void start(String id, String lineId, String name) {
