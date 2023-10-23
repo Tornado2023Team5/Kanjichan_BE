@@ -37,6 +37,9 @@ dependencies {
     implementation 'org.slf4j:slf4j-simple:1.7.25'
 
     implementation 'com.linecorp.bot:line-bot-spring-boot:6.0.0'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
 }
 
 tasks.withType(JavaCompile) {
