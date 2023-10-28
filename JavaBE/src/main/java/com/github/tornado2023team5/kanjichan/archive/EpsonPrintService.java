@@ -1,4 +1,4 @@
-package com.github.tornado2023team5.kanjichan.service;
+package com.github.tornado2023team5.kanjichan.archive;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;

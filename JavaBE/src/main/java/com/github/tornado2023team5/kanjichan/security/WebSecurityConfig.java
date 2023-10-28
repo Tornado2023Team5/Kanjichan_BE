@@ -25,16 +25,15 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 @EnableWebSecurity()
 @RequiredArgsConstructor
-public class WebSecurityConfig implements WebMvcConfigurer {
+public class WebSecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChains(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests((request) -> request
-//                .requestMatchers("/public/**").permitAll()
-//                .requestMatchers("/user/**").authenticated()
+                .requestMatchers("/public/**").permitAll()
+                .requestMatchers("/user/**").authenticated()
                 .anyRequest().permitAll()
         );
 
-        http.cors(AbstractHttpConfigurer::disable);
         http.csrf(AbstractHttpConfigurer::disable);
 
         return http.build();

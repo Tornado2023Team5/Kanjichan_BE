@@ -1,33 +1,27 @@
 package com.github.tornado2023team5.kanjichan.controller;
 
 import com.github.tornado2023team5.kanjichan.entity.Action;
-import com.github.tornado2023team5.kanjichan.model.AsobiPlanningSession;
 import com.github.tornado2023team5.kanjichan.model.GroupUserRegistry;
 import com.github.tornado2023team5.kanjichan.model.function.CommandInformationFormat;
+import com.github.tornado2023team5.kanjichan.model.function.CommandType;
 import com.github.tornado2023team5.kanjichan.model.function.ShopCategory;
 import com.github.tornado2023team5.kanjichan.model.function.command.*;
 import com.github.tornado2023team5.kanjichan.service.*;
+import com.github.tornado2023team5.kanjichan.service.mention.*;
 import com.google.maps.errors.ApiException;
 import com.linecorp.bot.client.LineMessagingClient;
-import com.linecorp.bot.model.PushMessage;
 import com.linecorp.bot.model.ReplyMessage;
 import com.linecorp.bot.model.event.MessageEvent;
 import com.linecorp.bot.model.event.message.TextMessageContent;
 import com.linecorp.bot.model.event.source.GroupSource;
 import com.linecorp.bot.model.event.source.Source;
 import com.linecorp.bot.model.message.TextMessage;
-import com.linecorp.bot.model.profile.MembersIdsResponse;
 import com.linecorp.bot.spring.boot.annotation.EventMapping;
 import com.linecorp.bot.spring.boot.annotation.LineMessageHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
-import java.text.ParseException;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -41,6 +35,12 @@ public class MentionController {
     private final SetupScheduleService setupScheduleService;
     private final FunctionCallService functionCallService;
     private final GoogleMapsService googleMapsService;
+    private final CommandSetDestinationService commandSetDestinationService;
+    private final CommandSearchSpotsService commandSearchSpotsService;
+    private final CommandConfirmPlanService commandConfirmPlanService;
+    private final CommandMakePlanService commandMakePlanService;
+    private final CommandResetPlanService commandResetPlanService;
+    private final CommandShowAdoptedSpotsService commandShowAdoptedSpotsService;
 
     @EventMapping
     public TextMessage formatInput(MessageEvent event) throws InterruptedException, IOException, ApiException, ExecutionException {
@@ -63,25 +63,108 @@ public class MentionController {
         String id = groupSource.getGroupId();
         CommandInformationFormat format = functionCallService.detect(messageText.replace("@Moon", ""), commandList(id));
         switch (format.getCommandType()) {
-            case NONE -> reply.append("入力内容を正しく認識できなかったウサ！🥕");
+            case NONE -> validate(format.getCommandType(), null, reply);
             case MAKE_PLAN -> {
                 var command = functionCallService.makePlan(messageText);
-                if (command == null) return new TextMessage(reply + "入力内容を正しく認識できませんでした。");
-                makePlan(id, reply, command, source.getUserId());
+                if (command == null) {
+                    reply.append("入力内容を正しく認識できませんでした。");
+                    return new TextMessage(reply.toString());
+                }
+                commandMakePlanService.makePlan(id, reply, command, source.getUserId());
             }
-            case RESET_PLAN -> resetPlan(id, reply);
-            case CONFIRM_PLAN -> confirmPlan(id, reply);
+            case RESET_PLAN -> {
+                var session = setupScheduleService.getSession(id);
+                if (session == null) {
+                    reply.append("まずは予定を立てるウサ！🥕\n");
+                    return new TextMessage(reply.toString());
+                }
+                commandResetPlanService.resetPlan(id, reply);
+            }
+            case CONFIRM_PLAN -> {
+                var session = setupScheduleService.getSession(id);
+                if (session == null) {
+                    reply.append("まずは予定を立てるウサ！🥕\n");
+                    return new TextMessage(reply.toString());
+                }
+                if (session.getResultsList().isEmpty()) {
+                    reply.append("何をして遊ぶかを教えるウサ！🥕\n");
+                    return new TextMessage(reply.toString());
+                }
+                commandConfirmPlanService.confirmPlan(id, reply);
+            }
             case SET_LOCATION -> {
                 var command = functionCallService.setLocation(messageText);
                 if (command == null) return new TextMessage(reply + "入力内容を正しく認識できませんでした。");
-                setDestination(id, reply, command.getDestination(), true);
+                var session = setupScheduleService.getSession(id);
+                if (session == null) {
+                    reply.append("まずは予定を立てるウサ！🥕\n");
+                    return new TextMessage(reply.toString());
+                }
+                if (command.getDestination() == null) {
+                    reply.append("集合場所場所を教えるウサ！🥕\n 例: \n @Moon \n 渋谷でカラオケする予定を立てて！");
+                    return new TextMessage(reply.toString());
+                }
+                commandSetDestinationService.setDestination(id, reply, command.getDestination(), true);
             }
             case SEARCH_SPOTS -> {
                 var command = functionCallService.searchSpots(messageText);
                 if (command == null) return new TextMessage(reply + "入力内容を正しく認識できませんでした。");
-                searchSpots(id, reply, command.getCategory(), command.getDestination());
+                commandSearchSpotsService.searchSpots(id, reply, command.getCategory(), command.getDestination());
             }
-            case SHOW_ADOPTED_SPOTS -> showAdoptedSpots(id, reply);
+            case SHOW_ADOPTED_SPOTS -> commandShowAdoptedSpotsService.showAdoptedSpots(id, reply);
+        }
+        return new TextMessage(reply.toString());
+    }
+
+    public TextMessage validate(CommandType type, CommandModel model, StringBuilder reply) {
+        // switch 内パターンマッチ使いてぇ！!Kotlin JVM21への対応はよ！
+        switch (type) {
+            case NONE -> reply.append("入力内容を正しく認識できなかったウサ！🥕");
+            case MAKE_PLAN -> {
+                var command = functionCallService.makePlan(messageText);
+                if (command == null) return new TextMessage(reply + "入力内容を正しく認識できませんでした。");
+                commandMakePlanService.makePlan(id, reply, command, source.getUserId());
+            }
+            case RESET_PLAN -> {
+                var session = setupScheduleService.getSession(id);
+                if (session == null) {
+                    reply.append("まずは予定を立てるウサ！🥕\n");
+                    return new TextMessage(reply.toString());
+                }
+                commandResetPlanService.resetPlan(id, reply);
+            }
+            case CONFIRM_PLAN -> {
+                var session = setupScheduleService.getSession(id);
+                if (session == null) {
+                    reply.append("まずは予定を立てるウサ！🥕\n");
+                    return new TextMessage(reply.toString());
+                }
+                if (session.getResultsList().isEmpty()) {
+                    reply.append("何をして遊ぶかを教えるウサ！🥕\n");
+                    return new TextMessage(reply.toString());
+                }
+                commandConfirmPlanService.confirmPlan(id, reply);
+            }
+            case SET_LOCATION -> {
+                var command = functionCallService.setLocation(messageText);
+                if (command == null) return new TextMessage(reply + "入力内容を正しく認識できませんでした。");
+                var session = setupScheduleService.getSession(id);
+                if (session == null) {
+                    reply.append("まずは予定を立てるウサ！🥕\n");
+                    return new TextMessage(reply.toString());
+                }
+                if (command.getDestination() == null) {
+                    reply.append("集合場所場所を教えるウサ！🥕\n 例: \n @Moon \n 渋谷でカラオケする予定を立てて！");
+                    return new TextMessage(reply.toString());
+                }
+                commandSetDestinationService.setDestination(id, reply, command.getDestination(), true);
+            }
+            case SEARCH_SPOTS -> {
+                var command = functionCallService.searchSpots(messageText);
+                if (command == null) return new TextMessage(reply + "入力内容を正しく認識できませんでした。");
+                commandSearchSpotsService.searchSpots(id, reply, command.getCategory(), command.getDestination());
+            }
+            case SHOW_ADOPTED_SPOTS -> commandShowAdoptedSpotsService.showAdoptedSpots(id, reply);
         }
         return new TextMessage(reply.toString());
     }
@@ -99,7 +182,8 @@ public class MentionController {
         var session = setupScheduleService.getSession(id);
 
         complete.append("SET_LOCATION: 計画の目的地、集合場所を設定します。\n");
-        if (session.getLocation() != null) complete.append("SEARCH_SPOTS: 計画の観光スポット、遊び場を検索します。「～で遊びたい！」\n");
+        if (session.getLocation() != null)
+            complete.append("SEARCH_SPOTS: 計画の観光スポット、遊び場を検索します。「～で遊びたい！」\n");
         if (session.getResultsList().size() >= 1)
             complete.append("SHOW_ADOPTED_SPOTS: 採用した観光スポット、遊び場をすべて表示します。\n");
 
@@ -110,117 +194,6 @@ public class MentionController {
         complete.append("NONE: どのコマンドにも当てはまらず、入力が不正と思われるもの。\n");
 
         return complete.toString();
-    }
-
-    public void makePlan(String id, StringBuilder reply, MakePlanCommand command, String lineId) throws IOException, InterruptedException, ApiException, ExecutionException {
-        if (setupScheduleService.isEditting(id)) {
-            reply.append("既に予定を立てているウサ！🥕　確定するウサ！🥕\n");
-            return;
-        }
-        setupScheduleService.start(id, lineId, lineMessagingClient.getGroupSummary(id).get().getGroupName());
-        reply.append("予定を立てる準備をしたウサ！🥕\n");
-
-        if (command.getDestination() != null) setDestination(id, reply, command.getDestination(), false);
-        else {
-            reply.append("集合場所を教えるウサ！🥕\n");
-            return;
-        }
-
-        if (command.getCategory() != null)
-            searchSpots(id, reply, command.getCategory(), setupScheduleService.getSession(id).getLocation());
-        else reply.append("何をして遊ぶかを教えるウサ！🥕\n");
-    }
-
-    public void resetPlan(String id, StringBuilder reply) {
-        var session = setupScheduleService.getSession(id);
-        if (session == null) {
-            reply.append("まずは予定を立てるウサ！🥕\n");
-            return;
-        }
-        setupScheduleService.reset(id);
-        reply.append("編集中の予定をリセットして、全ての情報を削除したウサ🥕\n");
-    }
-
-    public void confirmPlan(String id, StringBuilder reply) throws IOException, InterruptedException, ApiException {
-        var session = setupScheduleService.getSession(id);
-        if (session == null) {
-            reply.append("まずは予定を立てるウサ！🥕\n");
-            return;
-        }
-        if (session.getResultsList().size() == 0) {
-            reply.append("何をして遊ぶかを教えるウサ！🥕\n");
-            return;
-        }
-        setupScheduleService.draft(id);
-        reply.append(session.getDrafts().get(0).stream().map(Action::getName).collect(Collectors.joining("\n↓\n")));
-        setupScheduleService.decideDraft(session, session.getDrafts().get(0));
-        session.setUsers(setupScheduleService.getUsers(id).getUserIds());
-        LocalDateTime date = setupScheduleService.confirm(id);
-
-        reply.append("予定内容:\n");
-        reply.append("◦ 日程: ").append(date).append("\n");
-        reply.append("◦ 場所: ").append(googleMapsService.getStation(session.getLocation()).name).append("\n\n");
-        reply.append("楽しんできてほしいウサ！\uD83D\uDC30✨");
-
-        var directMessage = new StringBuilder();
-        directMessage.append("\uD83D\uDE80\uD83E\uDD55遊びの予定が決まったうさ\uD83E\uDD55\uD83D\uDE80\n");
-        directMessage.append("◦ グループ: ").append(session.getName()).append("\n");
-        directMessage.append("◦ 日程: ").append(date).append("\n");
-        directMessage.append("◦ 場所: ").append(googleMapsService.getStation(session.getLocation()).name).append("\n\n");
-        directMessage.append("楽しんできてほしいウサ！\uD83D\uDC30✨");
-
-        var lineUsers = setupScheduleService.getLineUsers(id);
-        var googleUsers = setupScheduleService.getGoogleCalendarUsers(id);
-        var addCalendarText = setupScheduleService.createEventUrl(session.getName(), "", session.getActions().get(0).getLocation(), session.getActions().get(0).getStart(), session.getActions().get(session.getActions().size() - 1).getEnd());
-
-        lineUsers.getLineUserIds().forEach(userId -> {
-            var textMessage = new TextMessage(directMessage.toString());
-            var addCalendarMessage = new TextMessage("Googleカレンダーに追加するリンクウサ！忘れないよにするウサ\uD83D\uDCC5" + "\n" + addCalendarText);
-            var pushMessage = googleUsers.contains(userId) ? new PushMessage(userId, Arrays.asList(textMessage, addCalendarMessage)) : new PushMessage(userId, textMessage);
-            lineMessagingClient.pushMessage(pushMessage);
-        });
-    }
-
-    public void setDestination(String id, StringBuilder reply, String destination, boolean sendReply) {
-        var session = setupScheduleService.getSession(id);
-        if (session == null) {
-            reply.append("まずは予定を立てるウサ！🥕\n");
-            return;
-        }
-        if (destination == null) {
-            reply.append("集合場所場所を教えるウサ！🥕\n 例: \n @Moon \n 渋谷でカラオケする予定を立てて！");
-            return;
-        }
-        setupScheduleService.setLocation(id, destination);
-
-        if (sendReply) reply.append("活動場所を「").append(destination).append("」に設定したウサ！🥕\n");
-    }
-
-    public void searchSpots(String id, StringBuilder reply, String text, String location) throws IOException, InterruptedException, ApiException {
-        var session = setupScheduleService.getSession(id);
-        if (session == null) {
-            reply.append("まずは予定を立てるウサ！🥕\n");
-            return;
-        }
-        if (session.getLocation() == null && location == null) {
-            reply.append("活動場所を設定してください。\n 例: \n @bot \n 渋谷で遊びたい！");
-            return;
-        }
-        if (text == null) {
-            reply.append("何をしたいか教えてください。\n 例: \n @bot \n 焼肉食べたい！");
-            return;
-        }
-        if (location != null) setDestination(id, reply, location, true);
-        ShopCategory category = functionCallService.pickup(text);
-
-        var results = googleMapsService.getShopInfo(session.getLocation(), category);
-        session.getResultsList().add(results);
-
-        reply.append("「").append(session.getLocation()).append("」周辺の").append("「").append(category.getValue()).append("」").append("はこんな所があるウサ！！\uD83D\uDC30\n\n");
-        reply.append(results.stream().map(place -> "◦ " + place.name + "\n" +
-                "レビュー: " + GoogleMapsService.getRatingStars(place.rating) + " " + place.rating + "\n" +
-                place.url).collect(Collectors.joining("\n\n")));
-        reply.append("\n\n").append("他にも遊び場所を追加するウサ？🌕\uD83D\uDC30✨\n").append("予定を確定するなら確定！って言ってほしいウサ！！\uD83E\uDD55\n");
     }
 
     public void removeSpot(String id, StringBuilder reply, String messageText) {
@@ -262,25 +235,6 @@ public class MentionController {
 //        session.getResultsList().add(session.getResults());
         session.setResults(null);
         reply.append("調査結果を採用しました。");
-    }
-
-    public void showAdoptedSpots(String id, StringBuilder reply) {
-        if (!setupScheduleService.isEditting(id)) {
-            reply.append("まずは予定を立てるウサ！🥕\n");
-            return;
-        }
-        var session = setupScheduleService.getSession(id);
-        if (session.getResultsList().size() == 0) {
-            reply.append("遊ぶ内容を教えてほしいウサ！🥕");
-            return;
-        }
-        reply.append("今はここで遊ぶ予定を立てているウサ！🥕");
-        for (var results : session.getResultsList()) {
-            for (var result : results) {
-                reply.append(result.name).append("\n");
-            }
-            reply.append("\n");
-        }
     }
 
     public void draft(String id, StringBuilder reply) throws IOException, InterruptedException, ApiException {

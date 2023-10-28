@@ -2,15 +2,13 @@ package com.github.tornado2023team5.kanjichan.model.function.command;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.Value;
+import lombok.*;
 
+@EqualsAndHashCode(callSuper = true)
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class EditAndAddSpotFromDecidedDraftCommand {
+public final class EditAndAddSpotFromDecidedDraftCommand extends CommandModel {
     @JsonPropertyDescription("新しく追加するスポットを追加する位置。情報がない無効な値の場合は-1。")
     @JsonProperty(required = true)
     private int index;
