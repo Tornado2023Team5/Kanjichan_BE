@@ -63,14 +63,21 @@ public class MentionController {
         String id = groupSource.getGroupId();
         CommandInformationFormat format = functionCallService.detect(messageText.replace("@Moon", ""), commandList(id));
         switch (format.getCommandType()) {
-            case NONE -> validate(format.getCommandType(), null, reply);
+            case NONE -> {
+                reply.append("入力内容を正しく認識できませんでした。");
+                return new TextMessage(reply.toString());
+            }
             case MAKE_PLAN -> {
                 var command = functionCallService.makePlan(messageText);
                 if (command == null) {
                     reply.append("入力内容を正しく認識できませんでした。");
                     return new TextMessage(reply.toString());
                 }
-                commandMakePlanService.makePlan(id, reply, command, source.getUserId());
+                if (setupScheduleService.isEditting(id)) {
+                    reply.append("既に予定を立てているウサ！🥕　確定するウサ！🥕\n");
+                    return new TextMessage(reply.toString());
+                }
+                commandMakePlanService.makePlan(command, id, source.getUserId(), reply);
             }
             case RESET_PLAN -> {
                 var session = setupScheduleService.getSession(id);
@@ -109,65 +116,77 @@ public class MentionController {
             case SEARCH_SPOTS -> {
                 var command = functionCallService.searchSpots(messageText);
                 if (command == null) return new TextMessage(reply + "入力内容を正しく認識できませんでした。");
+                if (!setupScheduleService.isEditting(id)) {
+                    reply.append("まずは予定を立てるウサ！🥕\n");
+                    return new TextMessage(reply.toString());
+                }
+                var session = setupScheduleService.getSession(id);
+                if (session.getResultsList().isEmpty()) {
+                    reply.append("遊ぶ内容を教えてほしいウサ！🥕");
+                    return new TextMessage(reply.toString());
+                }
                 commandSearchSpotsService.searchSpots(id, reply, command.getCategory(), command.getDestination());
             }
             case SHOW_ADOPTED_SPOTS -> commandShowAdoptedSpotsService.showAdoptedSpots(id, reply);
+            case SET_TIME -> {
+                var command = functionCallService.setTime(messageText);
+            }
         }
         return new TextMessage(reply.toString());
     }
 
-    public TextMessage validate(CommandType type, CommandModel model, StringBuilder reply) {
-        // switch 内パターンマッチ使いてぇ！!Kotlin JVM21への対応はよ！
-        switch (type) {
-            case NONE -> reply.append("入力内容を正しく認識できなかったウサ！🥕");
-            case MAKE_PLAN -> {
-                var command = functionCallService.makePlan(messageText);
-                if (command == null) return new TextMessage(reply + "入力内容を正しく認識できませんでした。");
-                commandMakePlanService.makePlan(id, reply, command, source.getUserId());
-            }
-            case RESET_PLAN -> {
-                var session = setupScheduleService.getSession(id);
-                if (session == null) {
-                    reply.append("まずは予定を立てるウサ！🥕\n");
-                    return new TextMessage(reply.toString());
-                }
-                commandResetPlanService.resetPlan(id, reply);
-            }
-            case CONFIRM_PLAN -> {
-                var session = setupScheduleService.getSession(id);
-                if (session == null) {
-                    reply.append("まずは予定を立てるウサ！🥕\n");
-                    return new TextMessage(reply.toString());
-                }
-                if (session.getResultsList().isEmpty()) {
-                    reply.append("何をして遊ぶかを教えるウサ！🥕\n");
-                    return new TextMessage(reply.toString());
-                }
-                commandConfirmPlanService.confirmPlan(id, reply);
-            }
-            case SET_LOCATION -> {
-                var command = functionCallService.setLocation(messageText);
-                if (command == null) return new TextMessage(reply + "入力内容を正しく認識できませんでした。");
-                var session = setupScheduleService.getSession(id);
-                if (session == null) {
-                    reply.append("まずは予定を立てるウサ！🥕\n");
-                    return new TextMessage(reply.toString());
-                }
-                if (command.getDestination() == null) {
-                    reply.append("集合場所場所を教えるウサ！🥕\n 例: \n @Moon \n 渋谷でカラオケする予定を立てて！");
-                    return new TextMessage(reply.toString());
-                }
-                commandSetDestinationService.setDestination(id, reply, command.getDestination(), true);
-            }
-            case SEARCH_SPOTS -> {
-                var command = functionCallService.searchSpots(messageText);
-                if (command == null) return new TextMessage(reply + "入力内容を正しく認識できませんでした。");
-                commandSearchSpotsService.searchSpots(id, reply, command.getCategory(), command.getDestination());
-            }
-            case SHOW_ADOPTED_SPOTS -> commandShowAdoptedSpotsService.showAdoptedSpots(id, reply);
-        }
-        return new TextMessage(reply.toString());
-    }
+//    public TextMessage validate(CommandType type, CommandModel model, StringBuilder reply) {
+//        // switch 内パターンマッチ使いてぇ！!Kotlin JVM21への対応はよ！
+//        switch (type) {
+//            case NONE -> reply.append("入力内容を正しく認識できなかったウサ！🥕");
+//            case MAKE_PLAN -> {
+//                var command = functionCallService.makePlan(messageText);
+//                if (command == null) return new TextMessage(reply + "入力内容を正しく認識できませんでした。");
+//                commandMakePlanService.makePlan(id, reply, command, source.getUserId());
+//            }
+//            case RESET_PLAN -> {
+//                var session = setupScheduleService.getSession(id);
+//                if (session == null) {
+//                    reply.append("まずは予定を立てるウサ！🥕\n");
+//                    return new TextMessage(reply.toString());
+//                }
+//                commandResetPlanService.resetPlan(id, reply);
+//            }
+//            case CONFIRM_PLAN -> {
+//                var session = setupScheduleService.getSession(id);
+//                if (session == null) {
+//                    reply.append("まずは予定を立てるウサ！🥕\n");
+//                    return new TextMessage(reply.toString());
+//                }
+//                if (session.getResultsList().isEmpty()) {
+//                    reply.append("何をして遊ぶかを教えるウサ！🥕\n");
+//                    return new TextMessage(reply.toString());
+//                }
+//                commandConfirmPlanService.confirmPlan(id, reply);
+//            }
+//            case SET_LOCATION -> {
+//                var command = functionCallService.setLocation(messageText);
+//                if (command == null) return new TextMessage(reply + "入力内容を正しく認識できませんでした。");
+//                var session = setupScheduleService.getSession(id);
+//                if (session == null) {
+//                    reply.append("まずは予定を立てるウサ！🥕\n");
+//                    return new TextMessage(reply.toString());
+//                }
+//                if (command.getDestination() == null) {
+//                    reply.append("集合場所場所を教えるウサ！🥕\n 例: \n @Moon \n 渋谷でカラオケする予定を立てて！");
+//                    return new TextMessage(reply.toString());
+//                }
+//                commandSetDestinationService.setDestination(id, reply, command.getDestination(), true);
+//            }
+//            case SEARCH_SPOTS -> {
+//                var command = functionCallService.searchSpots(messageText);
+//                if (command == null) return new TextMessage(reply + "入力内容を正しく認識できませんでした。");
+//                commandSearchSpotsService.searchSpots(id, reply, command.getCategory(), command.getDestination());
+//            }
+//            case SHOW_ADOPTED_SPOTS -> commandShowAdoptedSpotsService.showAdoptedSpots(id, reply);
+//        }
+//        return new TextMessage(reply.toString());
+//    }
 
     public String commandList(String id) {
         StringBuilder complete = new StringBuilder();

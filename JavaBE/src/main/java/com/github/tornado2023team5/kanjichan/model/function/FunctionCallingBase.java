@@ -5,12 +5,14 @@ import com.theokanning.openai.service.FunctionExecutor;
 import com.theokanning.openai.service.OpenAiService;
 import lombok.Data;
 import lombok.Value;
+import lombok.With;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 @Value
+@With
 public class FunctionCallingBase {
     Class clazz;
     String functionName;

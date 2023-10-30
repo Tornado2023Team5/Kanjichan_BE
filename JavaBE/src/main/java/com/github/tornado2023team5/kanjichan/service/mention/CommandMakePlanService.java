@@ -18,11 +18,7 @@ public class CommandMakePlanService {
     private final CommandSearchSpotsService commandSearchSpotsService;
     private final LineMessagingClient lineMessagingClient;
 
-    public void makePlan(String id, StringBuilder reply, MakePlanCommand command, String lineId) throws IOException, InterruptedException, ApiException, ExecutionException {
-        if (setupScheduleService.isEditting(id)) {
-            reply.append("既に予定を立てているウサ！🥕　確定するウサ！🥕\n");
-            return;
-        }
+    public void makePlan(MakePlanCommand command, String id, String lineId, StringBuilder reply) throws IOException, InterruptedException, ApiException, ExecutionException {
         setupScheduleService.start(id, lineId, lineMessagingClient.getGroupSummary(id).get().getGroupName());
         reply.append("予定を立てる準備をしたウサ！🥕\n");
 

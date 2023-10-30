@@ -12,7 +12,6 @@ public class CommandSetDestinationService {
 
     public void setDestination(String id, StringBuilder reply, String destination, boolean sendReply) {
         setupScheduleService.setLocation(id, destination);
-
         if (sendReply) reply.append("活動場所を「").append(destination).append("」に設定したウサ！🥕\n");
     }
 }

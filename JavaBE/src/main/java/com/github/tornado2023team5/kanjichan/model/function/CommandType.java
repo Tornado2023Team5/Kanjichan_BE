@@ -9,6 +9,7 @@ public enum CommandType {
     REMOVE_SPOT,
     ADOPT_SPOTS,
     SHOW_ADOPTED_SPOTS,
+    SET_TIME,
     MAKE_DRAFT,
     DECIDE_DRAFT,
     NONE

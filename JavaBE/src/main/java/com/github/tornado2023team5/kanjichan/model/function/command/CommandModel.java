@@ -7,5 +7,5 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public sealed class CommandModel permits DecideDraftCommand, EditAndAddSpotFromDecidedDraftCommand, EditAndChangeSpotFromDecidedDraftCommand, EditAndRemoveSpotFromDecidedDraftCommand, MakePlanCommand, RemoveSpotCommand, SearchSpotCommand, SetLocationCommand {
+public sealed class CommandModel permits DecideDraftCommand, EditAndAddSpotFromDecidedDraftCommand, EditAndChangeSpotFromDecidedDraftCommand, EditAndRemoveSpotFromDecidedDraftCommand, MakePlanCommand, RemoveSpotCommand, SearchSpotCommand, SetLocationCommand, SetTimeCommand {
 }
